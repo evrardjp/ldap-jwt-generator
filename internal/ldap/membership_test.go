@@ -4,7 +4,7 @@ import (
 	"sort"
 	"testing"
 
-	"gopkg.in/ldap.v2"
+	ldap "github.com/go-ldap/ldap/v3"
 )
 
 func TestToGroupNames(t *testing.T) {

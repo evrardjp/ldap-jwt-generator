@@ -7,8 +7,17 @@ import (
 	"net/http"
 )
 
-func WithBasicAuth(authenticator Authenticator, next http.HandlerFunc) http.HandlerFunc {
+func WithBasicAuth(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Extract tenant authenticator from context (set by WithTenantConfig)
+		authValue := r.Context().Value(TenantAuthenticatorKey)
+		if authValue == nil {
+			slog.Error("tenant authenticator not found in context")
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		authenticator := authValue.(Authenticator)
+
 		// Extract the username and password from the request
 		// Authorization header. If no Authentication header is present
 		// or the header value is invalid, then the 'ok' return value
@@ -27,7 +36,7 @@ func WithBasicAuth(authenticator Authenticator, next http.HandlerFunc) http.Hand
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), UserContextKey, *user) // Store the user value directly in the context.
+			ctx := context.WithValue(r.Context(), UserContextKey, user) // Store the user pointer in the context
 			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}

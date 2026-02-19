@@ -6,13 +6,27 @@ import (
 	"os"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type TokenIssuer struct {
 	PrivateKey    *ecdsa.PrivateKey
 	PublicKey     *ecdsa.PublicKey
 	TokenDuration time.Duration
+	IssuerFQDN    string
+}
+
+// AuthJWTClaims represents the JWT token claims
+type AuthJWTClaims struct {
+	// Custom claims
+	Username string   `json:"username"`
+	Email    string   `json:"email"`
+	UserDN   string   `json:"userDN"`
+	TenantID string   `json:"tenantId"`
+	Groups   []string `json:"groups"`
+
+	// Standard JWT claims (iss, aud, exp, nbf, iat, sub, jti)
+	jwt.RegisteredClaims
 }
 
 func NewTokenIssuer() (*TokenIssuer, error) {
@@ -27,6 +41,12 @@ func NewTokenIssuer() (*TokenIssuer, error) {
 	publicKeyPath := os.Getenv("PUBLIC_KEY_PATH")
 	if publicKeyPath == "" {
 		publicKeyPath = ECDSAPublicKey
+	}
+
+	// Load issuer FQDN from environment
+	issuerFQDN := os.Getenv("JWT_ISSUER_FQDN")
+	if issuerFQDN == "" {
+		return nil, fmt.Errorf("JWT_ISSUER_FQDN environment variable is required")
 	}
 
 	duration, err := time.ParseDuration(defaultDuration)
@@ -64,5 +84,6 @@ func NewTokenIssuer() (*TokenIssuer, error) {
 		PrivateKey:    ecdsaPrivateKey,
 		PublicKey:     ecdsaPublicKey,
 		TokenDuration: duration,
+		IssuerFQDN:    issuerFQDN,
 	}, nil
 }

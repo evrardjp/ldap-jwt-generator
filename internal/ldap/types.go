@@ -17,22 +17,42 @@ type BaseConfig struct {
 	TLSVerification bool
 	BindDN          string
 	BindPassword    string
-	UserFilter      string
-	GroupFilter     string
 	Attributes      []string
 }
 
 type TenantConfig struct {
-	UserBase              string
-	EligibleGroupsParents []string
-	GroupBase             string
-	AppMasterGroupBase    string
-	CustomerOpsGroupBase  string
-	ServiceGroupBase      string
-	OpsMasterGroupBase    string
-	ViewerGroupBase       string
-	AdminUserBase         string
-	AdminGroupBase        string
+	UserBase              string   `json:"userBase"`
+	UserFilter            string   `json:"userFilter"`
+	GroupBase             string   `json:"groupBase"`
+	GroupFilter           string   `json:"groupFilter"`
+	EligibleGroupsParents []string `json:"eligibleGroupsParents"`
+	AppMasterGroupBase    string   `json:"appMasterGroupBase,omitempty"`
+	CustomerOpsGroupBase  string   `json:"customerOpsGroupBase,omitempty"`
+	ServiceGroupBase      string   `json:"serviceGroupBase,omitempty"`
+	OpsMasterGroupBase    string   `json:"opsMasterGroupBase,omitempty"`
+	ViewerGroupBase       string   `json:"viewerGroupBase,omitempty"`
+	AdminUserBase         string   `json:"adminUserBase,omitempty"`
+	AdminGroupBase        string   `json:"adminGroupBase,omitempty"`
+}
+
+// Validate checks if the tenant configuration has all required fields
+func (tc *TenantConfig) Validate() error {
+	if tc.UserBase == "" {
+		return fmt.Errorf("userBase is required")
+	}
+	if tc.UserFilter == "" {
+		return fmt.Errorf("userFilter is required")
+	}
+	if tc.GroupBase == "" {
+		return fmt.Errorf("groupBase is required")
+	}
+	if tc.GroupFilter == "" {
+		return fmt.Errorf("groupFilter is required")
+	}
+	if len(tc.EligibleGroupsParents) == 0 {
+		return fmt.Errorf("eligibleGroupsParents is required")
+	}
+	return nil
 }
 
 func NewLDAPBaseConfig() (*BaseConfig, error) {

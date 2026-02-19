@@ -1,11 +1,9 @@
 package ldap
 
 import (
-	"fmt"
-	"log/slog"
 	"strings"
 
-	"gopkg.in/ldap.v2"
+	ldap "github.com/go-ldap/ldap/v3"
 )
 
 // THIS NEEDS A GOOD REFACTORING.
@@ -21,52 +19,8 @@ type LDAPMemberships struct {
 	NonSpecificGroups   []*ldap.Entry // This contains all the non-specific and non-project groups, unfiltered.
 }
 
-// Constructing LDAPMemberships struct with all the special groups the user is member of.
-// This does not include the standard groups like "authenticated" or "system:authenticated"
-// or cluster based groups.
-func (c *LDAPClient) getMemberships(userDN string, baseDNs []string) (*LDAPMemberships, error) {
-	m := &LDAPMemberships{}
-
-	// Fetch all groups containing the user
-	entries, err := c.getGroupsContainingUser(userDN, baseDNs)
-	if err != nil {
-		return nil, fmt.Errorf("could not get groups: %w", err)
-	}
-
-	// Categorize "special access" groups based on their DN
-	groupMapping := map[string]*[]*ldap.Entry{
-		strings.ToUpper(c.AdminGroupBase):       &m.AdminAccess,
-		strings.ToUpper(c.AppMasterGroupBase):   &m.AppOpsAccess,
-		strings.ToUpper(c.CustomerOpsGroupBase): &m.CustomerOpsAccess,
-		strings.ToUpper(c.ViewerGroupBase):      &m.ViewerAccess,
-		strings.ToUpper(c.ServiceGroupBase):     &m.ServiceAccess,
-		strings.ToUpper(c.OpsMasterGroupBase):   &m.CloudOpsAccess,
-	}
-
-	for _, entry := range entries {
-		upperDN := strings.ToUpper(entry.DN)
-		collected := false
-		for groupBase, groups := range groupMapping {
-			hasSuffix := strings.HasSuffix(upperDN, groupBase)
-			if hasSuffix {
-				*groups = append(*groups, entry)
-				collected = true
-				break
-			}
-		}
-
-		if !collected {
-			if strings.HasSuffix(upperDN, strings.ToUpper(c.GroupBase)) {
-				m.ClusterGroupsAccess = append(m.ClusterGroupsAccess, entry)
-			} else {
-				slog.Info(fmt.Sprintf("Couldn't collect %+v", entry))
-				m.NonSpecificGroups = append(m.NonSpecificGroups, entry)
-			}
-		}
-	}
-
-	return m, nil
-}
+// NOTE: getMemberships() method removed - functionality moved to TenantAuthenticator.categorizeGroups()
+// in tenant-registry.go as part of clean architecture refactoring
 
 // toGroupNames returns a slice for all the group names (DN) the user is member of,
 // rather than their full LDAP entries.
