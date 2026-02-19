@@ -1,7 +1,9 @@
 <!-- omit in toc -->
 # Developer guide
 
-This guide helps you get started developing kubi
+This guide helps you get started developing ldap-jwt-generator
+
+## Prerequisites
 
 Make sure you have the following dependencies installed before setting up your developer environment:
 
@@ -12,141 +14,16 @@ Make sure you have the following dependencies installed before setting up your d
  - curl
  - Go
  - Openssl
- - In this context we will use a kind cluster for the local deployment of Kubi : cluster kind {1.30 or 1.31}
+ - a kubernetes cluster for the local deployment of Kubi, for example: kind
+ - a ldap server, for example openLDAP
 
-## Deploy kubi  
+## Instructions
 
- - Get the source code https://github.com/ca-gip/kubi
-  
- - install go  https://go.dev/
-    
- - Create kind cluster with version 1.24-1.26 https://kind.sigs.k8s.io/docs/user/quick-start/
-  
- - Generate kubi private/public key
- ```
- cd scripts
- chmod +x generate_ecdsa_keys.sh
- ./generate_ecdsa_keys.sh
- ```
-  
- - install CFSSL tools
- ```
-cd scripts
-chmod +x install_cfssl.sh
-./install_cfssl.sh
- ```
-    
- - create certificate
- > Change `kubi.devops.managed.kvm` to an existing kubernetes node ip, vip, or fqdn
-   that point to an existing Kubernetes Cluster node.
-   **Eg: 10.56.221.4, kubernetes.<my_domain>...**
+- kind create cluster
+- scripts/generate_ecdsa_keys.sh
 
- ```
- cat <<EOF | cfssl genkey - | cfssljson -bare server
-       {
-         "hosts": [
-         "kubi.devops.managed.kvm",
-         "kubi-svc",
-         "kubi-svc.kube-system",
-         "kubi-svc.kube-system.svc",
-         "kubi-svc.kube-system.svc.cluster.local"
-   
-          ],
-        "CN": "kubi-svc.kube-system.svc.cluster.local",
-        "key": {
-        "algo": "ecdsa",
-        "size": 256
-          }
-      }
- EOF
-   
- 
-  cat <<EOF | kubectl create -f -
-  apiVersion: certificates.k8s.io/v1
-  kind: CertificateSigningRequest
-  metadata:
-   name: kubi-svc.kube-system
-  spec:
-    groups:
-      - system:authenticated
-    request: $(cat server.csr | base64 | tr -d '\n')
-    signerName: kubernetes.io/kube-apiserver-client
-    usages:
-      - digital signature
-      - key encipherment
-      - server auth
-  EOF
-  ```
-  
-  - Approving the certificate signing request
-  ```
-  kubectl certificate approve kubi-svc.kube-system
-  kubectl get csr
-  ```
- 
-  - Create a Certificate Authority
-  ```
-  cat <<EOF | cfssl gencert -initca - | cfssljson -bare ca
-      {
-       "CN": "kube-kubi",
-       "key": {
-       "algo": "rsa",
-       "size": 2048
-        }
-      }
-  EOF
- 
-  echo '{
-     "signing": {
-          "default": {
-             "usages": [
-                "digital signature",
-                "key encipherment",
-                "server auth"
-            ],
-            "expiry": "876000h",
-            "ca_constraint": {
-                "is_ca": false
-             }
-         }
-      }
-  }' > server-signing-config.json 
 
-  ```
-  - Use a server-signing-config.json signing configuration and the certificate authority key file and certificate to sign the certificate request:
-  ```
-  kubectl get csr kubi-svc.kube-system -o jsonpath='{.spec.request}' | \
-  base64 --decode | \
-  cfssl sign -ca ca.pem -ca-key ca-key.pem -config server-signing-config.json - | \
-  cfssljson -bare ca-signed-server
-  ```
 
-  - Upload the signed certificate
-  ```
-  kubectl get csr kubi-svc.kube-system -o json | \
-  jq '.status.certificate = "'$(base64 ca-signed-server.pem | tr -d '\n')'"' | \
-  kubectl replace --raw /apis/certificates.k8s.io/v1/certificatesigningrequests/kubi-svc.kube-system/status -f -
-  ```
-
-  - Download the certificate and use it
-  ```
-  kubectl get csr kubi-svc.kube-system -o jsonpath='{.status.certificate}' \
-  | base64 --decode > server.crt
-  cat server.crt  
-  ```
-
-  - Create a secret for the deployment
-  ``` 
-  kubectl -n kube-system create secret tls kubi --key server-key.pem --cert server.crt
-  #problem here , does not take the temp dir from mktemp
-  kubectl -n kube-system create secret generic kubi-encryption-secret --from-file=/tmp/ecdsa-key.pem --from-file=/tmp/ecdsa-public.pem
-  kubectl -n kube-system create secret generic kubi-secret  --from-literal ldap_passwd='password'
-  ```
-
-  - Deploy manifest (CRD, prerequisites,local-config) of kubi
-  ```
-  cd kubi
-  kubectl apply -f deployments/kube-deployment.yml
   kubectl apply -f deployments/kube-crds.yml
   kubectl apply -f deployments/kube-prerequisites.yml
   kubectl apply -f deployments/kube-local-config.yml

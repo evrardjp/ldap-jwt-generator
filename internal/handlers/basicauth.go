@@ -3,20 +3,10 @@ package middlewares
 import (
 	"context"
 	"fmt"
+	"ldap-jwt-generator/internal/user"
 	"log/slog"
 	"net/http"
-
-	"github.com/ca-gip/kubi/pkg/types"
 )
-
-type contextKey string
-
-const UserContextKey contextKey = "user"
-
-type Authenticator interface {
-	AuthN(username, password string) (*types.User, error)
-	AuthZ(user *types.User) (*types.User, error)
-}
 
 func WithBasicAuth(authenticator Authenticator, next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -34,16 +24,6 @@ func WithBasicAuth(authenticator Authenticator, next http.HandlerFunc) http.Hand
 			user, err := authenticator.AuthN(username, password)
 			if err != nil {
 				slog.Info(fmt.Sprintf("user %v failed to authenticate, %v", username, err))
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
-				return
-			}
-
-			// If the username and password are correct, then search for the user's group,
-			// and only add the user and its group to the request context if successful.
-			user, err = authenticator.AuthZ(user)
-			if err != nil {
-				// todo, log context r.url.
-				slog.Warn(fmt.Sprintf("user %v failed authorization, logging for auditing purposes, reason:  %v", username, err))
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}
