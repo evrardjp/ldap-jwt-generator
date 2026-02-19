@@ -3,7 +3,6 @@ package project
 const (
 	DNS1123LabelMaxLength             int    = 63
 	Dns1123LabelFmt                   string = "^[a-z0-9][-a-z0-9]*$"
-	KubiResourcePrefix                       = "kubi"
 	KubiEnvironmentProduction                = "production"
 	KubiEnvironmentShortProduction           = "prd"
 	KubiEnvironmentIntegration               = "integration"
@@ -32,16 +31,6 @@ var WhitelistedRoles = []string{
 	"admin",
 	"service",
 	"user",
-}
-
-// TODO: Make this dynamic
-var BlacklistedNamespaces = []string{
-	"kube-system",
-	"kube-public",
-	"ingress-nginx",
-	"admin",
-	"default",
-	KubiResourcePrefix,
 }
 
 var EnvironmentNamesMapping = map[string]string{

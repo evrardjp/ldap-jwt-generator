@@ -5,9 +5,10 @@ import (
 	"log/slog"
 	"os"
 	"strconv"
+	"strings"
 )
 
-type LDAPConfig struct {
+type BaseConfig struct {
 	Host            string
 	Port            int
 	PageSize        uint32
@@ -21,7 +22,7 @@ type LDAPConfig struct {
 	Attributes      []string
 }
 
-type LDAPTenantConfig struct {
+type TenantConfig struct {
 	UserBase              string
 	EligibleGroupsParents []string
 	GroupBase             string
@@ -34,8 +35,8 @@ type LDAPTenantConfig struct {
 	AdminGroupBase        string
 }
 
-func NewLDAPConfig() (*LDAPConfig, error) {
-	ldapConfig := &LDAPConfig{}
+func NewLDAPBaseConfig() (*BaseConfig, error) {
+	ldapConfig := &BaseConfig{}
 
 	var insecureLDAP bool
 	if env := os.Getenv("INSECURE_LDAP"); env != "" {
@@ -114,3 +115,36 @@ func NewLDAPConfig() (*LDAPConfig, error) {
 	ldapConfig.PageSize = uint32(ldapPageSize)
 	return ldapConfig, nil
 }
+
+func NewLDAPTenantConfig() (*TenantConfig, error) {
+	//This will need to be updated based on config file
+	ldapTenant := &TenantConfig{}
+	ldapUserBase := os.Getenv("LDAP_USERBASE")
+	switch {
+	case ldapUserBase == "":
+		return nil, fmt.Errorf("userBase is required")
+	case len(ldapUserBase) < 2 || len(ldapUserBase) > 200:
+		return nil, fmt.Errorf("length for LDAP_USERBASE must be between 2 and 200 characters, got %v", len(ldapUserBase))
+	}
+	ldapTenant.UserBase = ldapUserBase
+
+	ldapGroupBase := os.Getenv("LDAP_GROUPBASE")
+	switch {
+	case ldapGroupBase == "":
+		return nil, fmt.Errorf("groupBase is required")
+	case len(ldapGroupBase) < 2 || len(ldapGroupBase) > 200:
+		return nil, fmt.Errorf("length for LDAP_GROUPBASE must be between 2 and 200 characters, got %v", len(ldapGroupBase))
+	}
+	ldapTenant.GroupBase = ldapGroupBase
+
+	concatenatedEligibleList := os.Getenv("LDAP_ELIGIBLE_GROUPS_PARENTS")
+	if concatenatedEligibleList == "" {
+		return nil, fmt.Errorf("LDAP_ELIGIBLE_GROUPS_PARENTS env var is mandatory")
+	}
+	ldapEligibleGroupsParents := strings.Split(concatenatedEligibleList, "|")
+	ldapTenant.EligibleGroupsParents = ldapEligibleGroupsParents
+
+	return ldapTenant, nil
+}
+
+//ldapClient := ldap.NewLDAPClient(ldapConfig)

@@ -7,22 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"gopkg.in/ldap.v2"
-)
-
-var (
-	LdapGroupsHistogram = promauto.NewHistogram(prometheus.HistogramOpts{
-		Name:    "kubi_ldap_groups_number",
-		Help:    "Number of ldap groups of a user",
-		Buckets: []float64{10, 60, 100, 200, 500},
-	})
-
-	LdapGroupsRequestDurationHistogram = promauto.NewHistogram(prometheus.HistogramOpts{
-		Name:    "kubi_ldap_groups_request_duration",
-		Help:    "Duration of ldap user's groups requests",
-		Buckets: []float64{1, 2, 5, 6, 10},
-	})
 )
 
 // Connect to LDAP and bind with given credentials
@@ -33,7 +18,7 @@ func (c *LDAPClient) ldapConnectAndBind(login string, password string) (*ldap.Co
 	)
 	tlsConfig := &tls.Config{
 		ServerName:         c.Host,
-		InsecureSkipVerify: c.SkipTLSVerification,
+		InsecureSkipVerify: !c.TLSVerification,
 	}
 
 	switch {
@@ -82,14 +67,14 @@ func (c *LDAPClient) Query(request ldap.SearchRequest) ([]*ldap.Entry, error) {
 	return results.Entries, err
 }
 
-func (c *LDAPClient) getGroupsContainingUser(userDN string) ([]*ldap.Entry, error) {
+func (c *LDAPClient) getGroupsContainingUser(userDN string, bases []string) ([]*ldap.Entry, error) {
 
 	filter := fmt.Sprintf("(&(|(objectClass=groupOfNames)(objectClass=group))(member=%s))", userDN)
 	slog.Info(fmt.Sprintf("LDAP_FILTER:%s", filter))
 	var res []*ldap.Entry
 
 	timer := prometheus.NewTimer(LdapGroupsRequestDurationHistogram)
-	for _, groupbase := range c.EligibleGroupsParents {
+	for _, groupbase := range bases {
 		req := ldap.NewSearchRequest(
 			groupbase,
 			ldap.ScopeWholeSubtree,

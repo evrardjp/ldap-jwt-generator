@@ -1,9 +1,8 @@
-package middlewares
+package handlers
 
 import (
 	"context"
 	"fmt"
-	"ldap-jwt-generator/internal/user"
 	"log/slog"
 	"net/http"
 )

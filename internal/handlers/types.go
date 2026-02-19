@@ -1,4 +1,4 @@
-package middlewares
+package handlers
 
 import "ldap-jwt-generator/internal/user"
 

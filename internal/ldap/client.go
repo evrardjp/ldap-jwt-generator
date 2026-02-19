@@ -2,23 +2,23 @@ package ldap
 
 import (
 	"fmt"
+	"ldap-jwt-generator/pkg/types"
 
 	"log/slog"
-
-	"github.com/ca-gip/kubi/internal/project"
-	"github.com/ca-gip/kubi/pkg/types"
 )
 
 // This is the internal API for LDAP auth.
 // The rest of the implementation is in the internal/ldap package.
 
 type LDAPClient struct {
-	types.LdapConfig
+	*BaseConfig
+	*TenantConfig
 }
 
-func NewLDAPClient(config types.LdapConfig) *LDAPClient {
+func NewLDAPClient(config *BaseConfig, tenantConfig *TenantConfig) *LDAPClient {
 	return &LDAPClient{
 		config,
+		tenantConfig,
 	}
 }
 
@@ -91,17 +91,4 @@ func (c *LDAPClient) AuthZ(user *types.User) (*types.User, error) {
 	user.ProjectAccesses = ldapMemberships.toProjectNames()
 
 	return user, nil
-}
-
-// ListProjects Implement ProjectLister interface to be able to replace with a list of projects for testing.
-func (c *LDAPClient) ListProjects() ([]*types.Project, error) {
-	// todo fix this long standing bug of view and ops groups not being filtered.
-	allClusterGroups, err := c.getProjectGroups()
-	if err != nil {
-		return nil, fmt.Errorf("get Project groups failed, preventing to List Projects: %v", err)
-	}
-	if len(allClusterGroups) == 0 {
-		return nil, fmt.Errorf("no ldap groups found")
-	}
-	return project.GetProjectsFromGrouplist(allClusterGroups), nil
 }

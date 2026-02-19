@@ -4,20 +4,17 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"io"
+	"ldap-jwt-generator/internal/handlers"
+	"ldap-jwt-generator/internal/project"
 	"log/slog"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
-	"github.com/ca-gip/kubi/internal/middlewares"
-	"github.com/ca-gip/kubi/internal/project"
-	"github.com/ca-gip/kubi/internal/utils"
 	"github.com/ca-gip/kubi/pkg/types"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"gopkg.in/yaml.v2"
 )
 
 type TokenIssuer struct {
@@ -201,7 +198,7 @@ func (issuer *TokenIssuer) createAccessToken(user types.User, scopes string) (*s
 
 func (issuer *TokenIssuer) GenerateJWT(w http.ResponseWriter, r *http.Request) {
 
-	userContext := r.Context().Value(middlewares.UserContextKey)
+	userContext := r.Context().Value(handlers.UserContextKey)
 	if userContext == nil {
 		slog.Error("No user found in the context")
 		w.WriteHeader(http.StatusUnauthorized)
@@ -223,80 +220,6 @@ func (issuer *TokenIssuer) GenerateJWT(w http.ResponseWriter, r *http.Request) {
 	KubiTokenSizeHistogram.Observe(float64(len(*token)))
 	w.WriteHeader(http.StatusCreated)
 	io.WriteString(w, *token)
-}
-
-// GenerateConfig generates a config in yaml, including JWT token
-// and cluster information. It can be directly used out of the box
-// by kubectl. It returns a well formatted yaml
-// TODO: Refactor to use the same code as GenerateJWT
-func (issuer *TokenIssuer) GenerateConfig(w http.ResponseWriter, r *http.Request) {
-
-	userContext := r.Context().Value(middlewares.UserContextKey)
-	if userContext == nil {
-		slog.Error("No user found in the context")
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-	user := userContext.(types.User)
-
-	token, err := issuer.createAccessToken(user, "")
-	// no need to generate config if the user cannot access it.
-	if err != nil {
-		TokenCounter.WithLabelValues("token_error").Inc()
-		slog.Error("failed to grant token", "user", user.Username, "error", err)
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-
-	slog.Debug("granting token for user", "user", user.Username)
-
-	// Create a DNS 1123 cluster name and user name
-	yml, err := generateKubeConfig(issuer.PublicApiServerURL.String(), utils.Config.KubeCa, user, token)
-	if err != nil {
-		slog.Error("failed to generate config for user", "user", user.Username, "error", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "text/x-yaml; charset=utf-8")
-	w.WriteHeader(http.StatusCreated)
-	w.Write(yml)
-}
-
-func generateKubeConfig(serverURL string, CA string, user types.User, token *string) ([]byte, error) {
-	clusterName := strings.TrimPrefix(serverURL, "https://api.")
-	username := fmt.Sprintf("%s_%s", user.Username, clusterName)
-
-	config := &types.KubeConfig{
-		ApiVersion: "v1",
-		Kind:       "Config",
-		Clusters: []types.KubeConfigCluster{
-			{
-				Name: clusterName,
-				Cluster: types.KubeConfigClusterData{
-					Server:          serverURL,
-					CertificateData: CA,
-				},
-			},
-		},
-		CurrentContext: username,
-		Contexts: []types.KubeConfigContext{
-			{
-				Name: username,
-				Context: types.KubeConfigContextData{
-					Cluster: clusterName,
-					User:    username,
-				},
-			},
-		},
-		Users: []types.KubeConfigUser{
-			{
-				User: types.KubeConfigUserToken{Token: *token},
-				Name: username},
-		},
-	}
-
-	yml, err := yaml.Marshal(config)
-	return yml, err
 }
 
 func (issuer *TokenIssuer) VerifyToken(usertoken string) (*types.AuthJWTClaims, error) {

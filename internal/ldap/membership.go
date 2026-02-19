@@ -8,6 +8,8 @@ import (
 	"gopkg.in/ldap.v2"
 )
 
+// THIS NEEDS A GOOD REFACTORING.
+
 type LDAPMemberships struct {
 	AdminAccess         []*ldap.Entry // Contains the groups considered for admin, to be removed in the future
 	AppOpsAccess        []*ldap.Entry
@@ -22,11 +24,11 @@ type LDAPMemberships struct {
 // Constructing LDAPMemberships struct with all the special groups the user is member of.
 // This does not include the standard groups like "authenticated" or "system:authenticated"
 // or cluster based groups.
-func (c *LDAPClient) getMemberships(userDN string) (*LDAPMemberships, error) {
+func (c *LDAPClient) getMemberships(userDN string, baseDNs []string) (*LDAPMemberships, error) {
 	m := &LDAPMemberships{}
 
 	// Fetch all groups containing the user
-	entries, err := c.getGroupsContainingUser(userDN)
+	entries, err := c.getGroupsContainingUser(userDN, baseDNs)
 	if err != nil {
 		return nil, fmt.Errorf("could not get groups: %w", err)
 	}
@@ -52,7 +54,7 @@ func (c *LDAPClient) getMemberships(userDN string) (*LDAPMemberships, error) {
 				break
 			}
 		}
-		
+
 		if !collected {
 			if strings.HasSuffix(upperDN, strings.ToUpper(c.GroupBase)) {
 				m.ClusterGroupsAccess = append(m.ClusterGroupsAccess, entry)
