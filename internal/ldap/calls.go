@@ -3,11 +3,9 @@ package ldap
 import (
 	"crypto/tls"
 	"fmt"
-	"log/slog"
 
-	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
 	ldap "github.com/go-ldap/ldap/v3"
+	"github.com/pkg/errors"
 )
 
 // Connect to LDAP and bind with given credentials
@@ -23,12 +21,12 @@ func (c *LDAPClient) ldapConnectAndBind(login string, password string) (*ldap.Co
 
 	switch {
 	case c.UseSSL:
-		conn, err = ldap.DialTLS("tcp", fmt.Sprintf("%s:%d", c.Host, c.Port), tlsConfig)
+		conn, err = ldap.DialURL(fmt.Sprintf("ldaps://%s:%d", c.Host, c.Port), ldap.DialWithTLSConfig(tlsConfig))
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to create ldap tcp connection for %s:%d", c.Host, c.Port)
 		}
 	case c.StartTLS:
-		conn, err = ldap.Dial("tcp", fmt.Sprintf("%s:%d", c.Host, c.Port))
+		conn, err = ldap.DialURL(fmt.Sprintf("ldap://%s:%d", c.Host, c.Port))
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to create ldap tcp connection for %s:%d", c.Host, c.Port)
 		}
@@ -37,7 +35,7 @@ func (c *LDAPClient) ldapConnectAndBind(login string, password string) (*ldap.Co
 			return nil, errors.Wrapf(err, "unable to setup TLS connection")
 		}
 	default:
-		conn, err = ldap.Dial("tcp", fmt.Sprintf("%s:%d", c.Host, c.Port))
+		conn, err = ldap.DialURL(fmt.Sprintf("ldap://%s:%d", c.Host, c.Port))
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to create INSECURE ldap tcp connection for %s:%d", c.Host, c.Port)
 		}
@@ -65,33 +63,4 @@ func (c *LDAPClient) Query(request ldap.SearchRequest) ([]*ldap.Entry, error) {
 		return nil, fmt.Errorf("error searching in LDAP with request %v, %v", request, err)
 	}
 	return results.Entries, err
-}
-
-func (c *LDAPClient) getGroupsContainingUser(userDN string, bases []string) ([]*ldap.Entry, error) {
-
-	filter := fmt.Sprintf("(&(|(objectClass=groupOfNames)(objectClass=group))(member=%s))", userDN)
-	slog.Info(fmt.Sprintf("LDAP_FILTER:%s", filter))
-	var res []*ldap.Entry
-
-	timer := prometheus.NewTimer(LdapGroupsRequestDurationHistogram)
-	for _, groupbase := range bases {
-		req := ldap.NewSearchRequest(
-			groupbase,
-			ldap.ScopeWholeSubtree,
-			ldap.NeverDerefAliases, 0, 30, false,
-			// We add group filters to extra only the needed subgroups
-			filter,
-			[]string{"cn"},
-			nil,
-		)
-
-		queryRes, err := c.Query(*req)
-		if err != nil {
-			return nil, errors.Wrap(err, "error querying for group memberships")
-		}
-		res = append(res, queryRes...)
-	}
-	timer.ObserveDuration()
-	LdapGroupsHistogram.Observe(float64(len(res)))
-	return res, nil
 }

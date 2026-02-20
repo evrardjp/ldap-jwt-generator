@@ -8,38 +8,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	ldap "github.com/go-ldap/ldap/v3"
 	ldapPkg "ldap-jwt-generator/internal/ldap"
 	"ldap-jwt-generator/internal/user"
 )
-
-// Mock LDAP Client for testing
-type mockLDAPClient struct {
-	searchUsersFunc           func(baseDN, filter, username string) (*user.Details, error)
-	validateUserPasswordFunc  func(userDN, password string) error
-	searchGroupsFunc          func(baseDNs []string, filter, userDN string) ([]*ldap.Entry, error)
-}
-
-func (m *mockLDAPClient) SearchUsers(baseDN, filter, username string) (*user.Details, error) {
-	if m.searchUsersFunc != nil {
-		return m.searchUsersFunc(baseDN, filter, username)
-	}
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (m *mockLDAPClient) ValidateUserPassword(userDN, password string) error {
-	if m.validateUserPasswordFunc != nil {
-		return m.validateUserPasswordFunc(userDN, password)
-	}
-	return fmt.Errorf("not implemented")
-}
-
-func (m *mockLDAPClient) SearchGroups(baseDNs []string, filter, userDN string) ([]*ldap.Entry, error) {
-	if m.searchGroupsFunc != nil {
-		return m.searchGroupsFunc(baseDNs, filter, userDN)
-	}
-	return nil, fmt.Errorf("not implemented")
-}
 
 // Mock TenantRegistry for testing (implements ldapPkg.TenantRegistryInterface)
 type mockTenantRegistry struct {

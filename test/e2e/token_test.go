@@ -10,17 +10,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"ldap-jwt-generator/internal/handlers"
 	jwtPkg "ldap-jwt-generator/internal/jwt"
 	ldapPkg "ldap-jwt-generator/internal/ldap"
 	"ldap-jwt-generator/internal/user"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // Mock LDAP authenticator for e2e testing
 type mockE2EAuth struct {
-	tenantID  string
-	users     map[string]mockUser  // username -> user details + password
+	tenantID   string
+	users      map[string]mockUser // username -> user details + password
 	userGroups map[string][]string // username -> groups
 }
 
@@ -51,8 +52,7 @@ func (m *mockE2EAuth) AuthZ(userDetails *user.Details) (*user.Details, error) {
 
 // Mock tenant registry for e2e testing
 type mockE2ERegistry struct {
-	authenticators map[string]*ldapPkg.TenantAuthenticator
-	mockAuths      map[string]*mockE2EAuth
+	mockAuths map[string]*mockE2EAuth
 }
 
 func (m *mockE2ERegistry) GetAuthenticator(tenantID string) (*ldapPkg.TenantAuthenticator, error) {

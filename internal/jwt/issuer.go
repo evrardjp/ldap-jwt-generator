@@ -47,10 +47,10 @@ func (issuer *TokenIssuer) GenerateJWT(w http.ResponseWriter, r *http.Request) {
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    issuer.IssuerFQDN,                      // iss: Application FQDN from env var
 			Subject:   userDetails.Username,                   // sub: User identity
-			Audience:  jwt.ClaimStrings{issuer.IssuerFQDN},   // aud: Intended audience (same as issuer)
-			ExpiresAt: jwt.NewNumericDate(expiresAt),         // exp: Expiration time
-			NotBefore: jwt.NewNumericDate(now),               // nbf: Not valid before (now)
-			IssuedAt:  jwt.NewNumericDate(now),               // iat: Issued at time
+			Audience:  jwt.ClaimStrings{issuer.IssuerFQDN},    // aud: Intended audience (same as issuer)
+			ExpiresAt: jwt.NewNumericDate(expiresAt),          // exp: Expiration time
+			NotBefore: jwt.NewNumericDate(now),                // nbf: Not valid before (now)
+			IssuedAt:  jwt.NewNumericDate(now),                // iat: Issued at time
 			ID:        generateJTI(userDetails.Username, now), // jti: Unique token ID
 		},
 	}

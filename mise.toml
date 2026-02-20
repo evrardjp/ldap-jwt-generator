@@ -1,3 +1,95 @@
 [tools]
 go = "latest"
 golangci-lint = "latest"
+
+[tasks."build"]
+description = "Build the ldap-jwt-generator binary"
+run = [
+  "go mod download",
+  "go build -o bin/ldap-jwt-generator -ldflags='-s -w' cmd/main.go"
+]
+
+[tasks."build:container"]
+description = "Build container image"
+depends = ["build"]
+run = "docker build -t ldap-jwt-generator:latest ."
+
+[tasks."lint"]
+description = "Run linters"
+run = [
+  "go fmt ./...",
+  "go vet ./...",
+  "golangci-lint run ./..."
+]
+
+[tasks."test:unit"]
+description = "Run unit tests"
+run = "go test -v -cover -race ./internal/..."
+
+[tasks."test:integration"]
+description = "Run integration tests"
+depends = ["test:unit"]
+run = "go test -v -tags=integration ./test/e2e/..."
+
+[tasks."test:all"]
+description = "Run all tests"
+depends = ["lint", "test:unit", "test:integration"]
+
+[tasks."test:coverage"]
+description = "Run tests with coverage report"
+run = [
+  "go test -v -coverprofile=coverage.out -covermode=atomic ./...",
+  "go tool cover -html=coverage.out -o coverage.html",
+  "echo 'Coverage report: coverage.html'"
+]
+
+[tasks."validate"]
+description = "Validate tenant configs"
+run = "go run scripts/validate-configs.go"
+
+[tasks."clean"]
+description = "Clean build artifacts"
+run = [
+  "rm -rf bin/",
+  "rm -f coverage.out coverage.html"
+]
+
+[tasks."dev:prerequisites"]
+description = "Run ldap server"
+run = "bin/ldap-jwt-generator"
+
+[tasks."dev:run"]
+description = "Run container locally"
+depends = ["build:container"]
+run = """
+docker run --rm -p 8080:8080 \
+  -v ./test/configs:/etc/ldap-configs:ro \
+  -v ./test/keys:/var/run/secrets/ecdsa:ro \
+  -e LDAP_SERVER=ldap.example.com \
+  -e LDAP_PORT=389 \
+  -e LDAP_BINDDN="CN=svc,DC=example,DC=org" \
+  -e LDAP_PASSWD=password \
+  -e JWT_ISSUER_FQDN=localhost:8080 \
+  -e TOKEN_LIFETIME=4h \
+  ldap-jwt-generator:latest
+"""
+
+[tasks."ci"]
+description = "Run CI pipeline"
+run = [
+  { task = "test:all" },
+  { task = "build:container" }
+]
+
+[tasks."release"]
+description = "Build and tag container image with version after running all its tests"
+depends = ["build:container", "test:all", "tag:git", "tag:container"]
+run = [
+  "docker tag ldap-jwt-generator:latest ldap-jwt-generator:{{env.VERSION}}"
+]
+
+[tasks."tag:git"]
+description = "Tag the git repo on current branch"
+run = [
+  #"git tag {{env.VERSION}} HEAD"
+]

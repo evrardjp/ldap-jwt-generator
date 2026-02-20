@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"log/slog"
+	"net/http"
 	"os"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"

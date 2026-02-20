@@ -56,16 +56,6 @@ func (m *LDAPMemberships) toGroupNames() []string {
 	return groups
 }
 
-// toProjectNames retuns a slice for all the project names the user is member of,
-// rather than their full LDAP entries. This is not returning a slice of the projects.
-func (m *LDAPMemberships) toProjectNames() []string {
-	var groups []string
-	for _, entry := range m.ClusterGroupsAccess {
-		groups = append(groups, entry.GetAttributeValue("cn"))
-	}
-	return groups
-}
-
 func (m *LDAPMemberships) isUserAllowedOnCluster() bool {
 	// To get access, the user needs at least one of the following:
 	return (len(m.AdminAccess) > 0 || // - Have special rights

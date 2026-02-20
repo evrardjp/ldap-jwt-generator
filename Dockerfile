@@ -1,8 +1,4 @@
 FROM scratch
-ARG TARGETOS
-ARG TARGETARCH
-ARG TARGETVARIANT
-ARG BINARYNAME
 
-COPY kubi-${BINARYNAME} /kubi
-CMD ["./kubi"]
+COPY ./bin/ldap-jwt-generator /bin/ldap-jwt-generator
+CMD ["ldap-jwt-generator"]
