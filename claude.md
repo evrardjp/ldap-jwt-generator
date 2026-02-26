@@ -14,9 +14,7 @@ This document provides comprehensive guidance for Claude Code when assisting wit
 - **LDAP Client**: `github.com/go-ldap/ldap/v3` v3.4.12
 - **JWT Libraries**:
   - `github.com/golang-jwt/jwt/v5` v5.3.1 (primary)
-  - `github.com/dgrijalva/jwt-go` v3.2.0 (legacy support)
 - **Metrics**: `github.com/prometheus/client_golang` v1.23.2
-- **Kubernetes**: `k8s.io/client-go` v0.35.1, `k8s.io/apimachinery` v0.35.1
 - **Testing**: Standard Go testing package (NOT Ginkgo/Gomega)
 - **Build Tools**: mise task runner, Docker, GoReleaser
 
