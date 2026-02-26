@@ -24,7 +24,7 @@ run = "go test -v -cover -race ./..." # should include ./test/e2e/token_mock_tes
 
 [tasks."test:e2e"]
 description = "Run e2e tests (requires containers)"
-depends = ["build", "dev:ldap:start", "dev:api:start"]
+depends = ["dev:ldap:start", "dev:api:start"]
 depends_post = ["dev:api:stop", "dev:ldap:stop"]
 run = "go test -v ./test/e2e/token_e2e_test.go"
 
@@ -41,6 +41,7 @@ run = [
 ]
 
 [tasks."dev:api:start"]
+depends = ["build"]
 description = "Start this API for local testing"
 run = """
 docker run -d \
