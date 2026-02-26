@@ -15,10 +15,17 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    services:
+      docker:
+        image: docker:latest
+        options: --privileged
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set up Docker
+        run: docker info
 
       - name: Install mise
         uses: jdx/mise-action@v2
