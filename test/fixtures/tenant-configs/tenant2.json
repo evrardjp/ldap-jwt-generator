@@ -1,0 +1,10 @@
+{
+  "userBase": "ou=Users,dc=example,dc=org",
+  "userFilter": "(cn=%s)",
+  "groupSources": [
+    {
+      "base": "cn=ADMIN_KUBERNETES,ou=TEAMS,ou=Groups,dc=example,dc=org",
+      "filter": "(member=%s)"
+    }
+  ]
+}
