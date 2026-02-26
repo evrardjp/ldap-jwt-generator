@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -237,7 +238,7 @@ func TestE2E_RealLDAP_UserWithNoGroups(t *testing.T) {
 	// Verify error message mentions groups
 	body, _ := io.ReadAll(resp.Body)
 	bodyStr := string(body)
-	if !contains(bodyStr, "group") {
+	if !strings.Contains(bodyStr, "group") {
 		t.Errorf("Expected error message to mention 'group', got: %s", bodyStr)
 	}
 }
@@ -373,17 +374,4 @@ func TestE2E_RealLDAP_MetricsEndpoint(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status %d, got %d", http.StatusOK, resp.StatusCode)
 	}
-}
-
-func contains(s, substr string) bool {
-	return len(s) > 0 && len(substr) > 0 && containsSubstring(s, substr)
-}
-
-func containsSubstring(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
