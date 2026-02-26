@@ -71,7 +71,7 @@ func TestE2E_RealLDAP_ValidUser(t *testing.T) {
 			tokenString := string(tokenBytes)
 
 			// Parse token (we need to load the public key)
-			publicKeyPEM, err := os.ReadFile("../../test/ecdsa-pub.pem")
+			publicKeyPEM, err := os.ReadFile("../../fixtures/signing-keys/ecdsa-public-key.pem")
 			if err != nil {
 				t.Fatalf("Failed to read public key: %v", err)
 			}

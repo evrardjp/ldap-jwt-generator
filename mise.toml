@@ -28,8 +28,8 @@ depends = ["lint", "test:unit"]
 
 [tasks."test:e2e"]
 description = "Run e2e tests (requires containers)"
-depends = ["build:container", "dev:ldap:start"]
-depends_post = ["dev:ldap:stop"]
+depends = ["build:container", "dev:ldap:start", "dev:api:start"]
+depends_post = ["dev:api:stop", "dev:ldap:stop"]
 run = "go test -v ./test/e2e/token_e2e_test.go"
 
 [tasks."test:all"]
@@ -59,6 +59,7 @@ docker run -d \
   -e TOKEN_LIFETIME="4h" \
   -e INSECURE_LDAP="true" \
   -v $(pwd)/test/fixtures/tenant-configs:/etc/ldap-jwt-generator/ldap-configs:ro \
+  #careful, name of file matters here, ensure fixtures are correct \
   -v $(pwd)/test/fixtures/signing-keys:/etc/ldap-jwt-generator/signing-keys:ro \
   ldap-jwt-generator:latest
 """
@@ -66,12 +67,11 @@ docker run -d \
 [tasks."dev:api:stop"]
 description = "Stop this API server after local testing"
 run = """
+echo "Stopping container"
 docker stop ldap-jwt-test-api 2>/dev/null || true
+echo "Removing container"
 docker rm ldap-jwt-test-api 2>/dev/null || true
 """
-
-#-v $(pwd)/test/ecdsa-pub.pem:/etc/ldap-jwt-generator/signing-keys/ecdsa-public-key.pem:ro \
-#-v $(pwd)/test/fixtures/signing-keys/ecdsa-key.pem:/etc/ldap-jwt-generator/signing-keys/:ro \
 
 [tasks."dev:ldap:start"]
 description = "Start docker network and LDAP server for e2e testing"
@@ -95,19 +95,14 @@ echo "Waiting for LDAP server to start..."
 sleep 8
 
 # Load test data into LDAP
-cat test/e2e/ldif/test-data.ldif | docker exec -i ldap-jwt-test-ldap ldapadd -x -D "cn=admin,dc=example,dc=org" -w admin
+cat test/fixtures/ldif/test-data.ldif | docker exec -i ldap-jwt-test-ldap ldapadd -x -D "cn=admin,dc=example,dc=org" -w admin
 
 echo "LDAP test data loaded"
-
-echo "Waiting for API to connect to LDAP..."
 sleep 3
 
 echo ""
-echo "LDAP server and API are running!"
-echo "LDAP: ldap://localhost:389"
-echo "API: http://localhost:8080"
-echo ""
-echo "Check logs with: mise run dev:ldap:logs"
+echo "LDAP server running on localhost:389!"
+echo "Check logs with: mise run dev:logs"
 """
 
 [tasks."dev:ldap:stop"]

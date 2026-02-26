@@ -69,12 +69,12 @@ func createTestServer(t *testing.T) (*httptest.Server, *jwtPkg.TokenIssuer, *moc
 	t.Helper()
 
 	// Load test keys
-	privateKeyPEM, err := os.ReadFile("../../test/ecdsa-key.pem")
+	privateKeyPEM, err := os.ReadFile("../../test/fixtures/signing-keys/ecdsa-private-key.pem")
 	if err != nil {
 		t.Fatalf("Failed to read test private key: %v", err)
 	}
 
-	publicKeyPEM, err := os.ReadFile("../../test/ecdsa-pub.pem")
+	publicKeyPEM, err := os.ReadFile("../../fixtures/signing-keys/ecdsa-public-key.pem")
 	if err != nil {
 		t.Fatalf("Failed to read test public key: %v", err)
 	}
