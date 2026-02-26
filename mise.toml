@@ -22,19 +22,15 @@ run = [
 description = "Run unit tests"
 run = "go test -v -cover -race ./..." # should include ./test/e2e/token_mock_test.go ./test/e2e/e2e_suite_test.go"
 
-[tasks."test:short"]
-description = "Run short tests"
-depends = ["lint", "test:unit"]
-
 [tasks."test:e2e"]
 description = "Run e2e tests (requires containers)"
-depends = ["build:container", "dev:ldap:start", "dev:api:start"]
+depends = ["build", "dev:ldap:start", "dev:api:start"]
 depends_post = ["dev:api:stop", "dev:ldap:stop"]
 run = "go test -v ./test/e2e/token_e2e_test.go"
 
 [tasks."test:all"]
 description = "Run all tests"
-depends = ["test:short", "test:e2e"]
+depends = ["test:lint", "test:unit", "test:e2e"]
 
 [tasks."clean"]
 description = "Clean build artifacts"
@@ -107,10 +103,13 @@ echo "Check logs with: mise run dev:logs"
 [tasks."dev:ldap:stop"]
 description = "Stop LDAP server and docker network"
 run = """
+echo "Stopping LDAP server"
 docker stop ldap-jwt-test-ldap 2>/dev/null || true
+echo "Removing ldap sever container"
 docker rm ldap-jwt-test-ldap 2>/dev/null || true
+echo "Removing docker network"
 docker network rm ldap-jwt-test 2>/dev/null || true
-echo "Services stopped, removed, and network removed"
+echo "LDAP development server and its network are now stopped"
 """
 
 [tasks."dev:logs"]
