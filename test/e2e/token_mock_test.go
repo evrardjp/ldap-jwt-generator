@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"ldap-jwt-generator/internal/handlers"
 	jwtPkg "ldap-jwt-generator/internal/jwt"
 	ldapPkg "ldap-jwt-generator/internal/ldap"
 	"ldap-jwt-generator/internal/user"
@@ -226,8 +225,6 @@ func createTestServer(t *testing.T) (*httptest.Server, *jwtPkg.TokenIssuer, *moc
 
 		// Set context for token generation
 		ctx := r.Context()
-		ctx = handlers.WithUserInContext(ctx, userDetails)
-		ctx = handlers.WithTenantIDInContext(ctx, tenantID)
 		r = r.WithContext(ctx)
 
 		// Generate JWT

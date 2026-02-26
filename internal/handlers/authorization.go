@@ -8,7 +8,7 @@ import (
 	"ldap-jwt-generator/internal/user"
 )
 
-func WithAuthorization(next http.HandlerFunc) http.HandlerFunc {
+func WithGroupEnrichment(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Extract user from context (set by WithBasicAuth)
 		userValue := r.Context().Value(UserContextKey)
@@ -33,6 +33,15 @@ func WithAuthorization(next http.HandlerFunc) http.HandlerFunc {
 		if err != nil {
 			slog.Error("failed to fetch user groups", "user", userDetails.Username, "error", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		// Verify user belongs to at least one group (authorization requirement)
+		if len(enrichedUser.Groups) == 0 {
+			slog.Warn("user has no groups, denying access",
+				"user", enrichedUser.Username,
+				"userDN", enrichedUser.UserDN)
+			http.Error(w, "Forbidden: User must belong to at least one group", http.StatusForbidden)
 			return
 		}
 

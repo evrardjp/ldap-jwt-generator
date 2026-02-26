@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"os"
 	"strconv"
-	"strings"
 )
 
 type BaseConfig struct {
@@ -20,19 +19,15 @@ type BaseConfig struct {
 	Attributes      []string
 }
 
+type GroupSource struct {
+	Base   string `json:"base"`
+	Filter string `json:"filter"`
+}
+
 type TenantConfig struct {
-	UserBase              string   `json:"userBase"`
-	UserFilter            string   `json:"userFilter"`
-	GroupBase             string   `json:"groupBase"`
-	GroupFilter           string   `json:"groupFilter"`
-	EligibleGroupsParents []string `json:"eligibleGroupsParents"`
-	AppMasterGroupBase    string   `json:"appMasterGroupBase,omitempty"`
-	CustomerOpsGroupBase  string   `json:"customerOpsGroupBase,omitempty"`
-	ServiceGroupBase      string   `json:"serviceGroupBase,omitempty"`
-	OpsMasterGroupBase    string   `json:"opsMasterGroupBase,omitempty"`
-	ViewerGroupBase       string   `json:"viewerGroupBase,omitempty"`
-	AdminUserBase         string   `json:"adminUserBase,omitempty"`
-	AdminGroupBase        string   `json:"adminGroupBase,omitempty"`
+	UserBase     string        `json:"userBase"`
+	UserFilter   string        `json:"userFilter"`
+	GroupSources []GroupSource `json:"groupSources"`
 }
 
 // Validate checks if the tenant configuration has all required fields
@@ -43,14 +38,16 @@ func (tc *TenantConfig) Validate() error {
 	if tc.UserFilter == "" {
 		return fmt.Errorf("userFilter is required")
 	}
-	if tc.GroupBase == "" {
-		return fmt.Errorf("groupBase is required")
+	if len(tc.GroupSources) == 0 {
+		return fmt.Errorf("groupSources is required and must have at least one entry")
 	}
-	if tc.GroupFilter == "" {
-		return fmt.Errorf("groupFilter is required")
-	}
-	if len(tc.EligibleGroupsParents) == 0 {
-		return fmt.Errorf("eligibleGroupsParents is required")
+	for i, gs := range tc.GroupSources {
+		if gs.Base == "" {
+			return fmt.Errorf("groupSources[%d].base is required", i)
+		}
+		if gs.Filter == "" {
+			return fmt.Errorf("groupSources[%d].filter is required", i)
+		}
 	}
 	return nil
 }
@@ -135,36 +132,3 @@ func NewLDAPBaseConfig() (*BaseConfig, error) {
 	ldapConfig.PageSize = uint32(ldapPageSize)
 	return ldapConfig, nil
 }
-
-func NewLDAPTenantConfig() (*TenantConfig, error) {
-	//This will need to be updated based on config file
-	ldapTenant := &TenantConfig{}
-	ldapUserBase := os.Getenv("LDAP_USERBASE")
-	switch {
-	case ldapUserBase == "":
-		return nil, fmt.Errorf("userBase is required")
-	case len(ldapUserBase) < 2 || len(ldapUserBase) > 200:
-		return nil, fmt.Errorf("length for LDAP_USERBASE must be between 2 and 200 characters, got %v", len(ldapUserBase))
-	}
-	ldapTenant.UserBase = ldapUserBase
-
-	ldapGroupBase := os.Getenv("LDAP_GROUPBASE")
-	switch {
-	case ldapGroupBase == "":
-		return nil, fmt.Errorf("groupBase is required")
-	case len(ldapGroupBase) < 2 || len(ldapGroupBase) > 200:
-		return nil, fmt.Errorf("length for LDAP_GROUPBASE must be between 2 and 200 characters, got %v", len(ldapGroupBase))
-	}
-	ldapTenant.GroupBase = ldapGroupBase
-
-	concatenatedEligibleList := os.Getenv("LDAP_ELIGIBLE_GROUPS_PARENTS")
-	if concatenatedEligibleList == "" {
-		return nil, fmt.Errorf("LDAP_ELIGIBLE_GROUPS_PARENTS env var is mandatory")
-	}
-	ldapEligibleGroupsParents := strings.Split(concatenatedEligibleList, "|")
-	ldapTenant.EligibleGroupsParents = ldapEligibleGroupsParents
-
-	return ldapTenant, nil
-}
-
-//ldapClient := ldap.NewLDAPClient(ldapConfig)

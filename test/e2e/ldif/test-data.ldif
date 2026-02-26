@@ -1,0 +1,57 @@
+dn: ou=Users,dc=example,dc=org
+objectClass: organizationalUnit
+ou: Users
+
+dn: cn=admin-kube1,ou=Users,dc=example,dc=org
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: inetOrgPerson
+cn: admin-kube1
+uid: admin-kube1
+sn: One
+givenName: AdminKube
+userPassword: somepass
+mail: adminkube1@example.org
+
+dn: cn=developer1,ou=Users,dc=example,dc=org
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: inetOrgPerson
+cn: developer1
+uid: developer1
+sn: One
+givenName: Dev
+userPassword: somepass
+mail: developer1@example.org
+
+dn: cn=no-group-user,ou=Users,dc=example,dc=org
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: inetOrgPerson
+cn: no-group-user
+uid: no-group-user
+givenName: NoGroup
+sn: User
+userPassword: somepass
+mail: no-group-user@example.org
+
+dn: ou=Groups,dc=example,dc=org
+objectClass: organizationalUnit
+ou: groups
+
+dn: ou=TEAMS,ou=Groups,dc=example,dc=org
+objectClass: organizationalUnit
+ou: teams
+
+dn: cn=ADMIN_KUBERNETES,ou=TEAMS,ou=Groups,dc=example,dc=org
+cn: ADMIN_KUBERNETES
+objectClass: groupOfNames
+member: cn=admin-kube1,ou=Users,dc=example,dc=org
+
+dn: cn=DL_KUB_CAGIPHP_PROJET-TOTO-DEV_ADMIN,ou=Groups,dc=example,dc=org
+cn: DL_KUB_CAGIPHP_PROJET-TOTO-DEV_ADMIN
+objectClass: groupOfNames
+member: cn=developer1,ou=Users,dc=example,dc=org

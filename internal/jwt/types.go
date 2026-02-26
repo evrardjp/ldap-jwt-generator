@@ -9,6 +9,11 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+const (
+	PublicKeyLocation  = "/etc/ldap-jwt-generator/signing-keys/ecdsa-public-key.pem"
+	PrivateKeyLocation = "/etc/ldap-jwt-generator/signing-keys/ecdsa-private-key.pem"
+)
+
 type TokenIssuer struct {
 	PrivateKey    *ecdsa.PrivateKey
 	PublicKey     *ecdsa.PublicKey
@@ -19,11 +24,11 @@ type TokenIssuer struct {
 // AuthJWTClaims represents the JWT token claims
 type AuthJWTClaims struct {
 	// Custom claims
-	Username string   `json:"username"`
-	Email    string   `json:"email"`
-	UserDN   string   `json:"userDN"`
-	TenantID string   `json:"tenantId"`
-	Groups   []string `json:"groups"`
+	User    string   `json:"username"`
+	Contact string   `json:"email"`
+	UserDN  string   `json:"userDN"`
+	Tenant  string   `json:"tenantId"`
+	Groups  []string `json:"groups"`
 
 	// Standard JWT claims (iss, aud, exp, nbf, iat, sub, jti)
 	jwt.RegisteredClaims
@@ -33,14 +38,6 @@ func NewTokenIssuer() (*TokenIssuer, error) {
 	defaultDuration := os.Getenv("TOKEN_LIFETIME")
 	if defaultDuration == "" {
 		defaultDuration = "4h"
-	}
-	privateKeyPath := os.Getenv("PRIVATE_KEY_PATH")
-	if privateKeyPath == "" {
-		privateKeyPath = ECDSAPrivateKey
-	}
-	publicKeyPath := os.Getenv("PUBLIC_KEY_PATH")
-	if publicKeyPath == "" {
-		publicKeyPath = ECDSAPublicKey
 	}
 
 	// Load issuer FQDN from environment
@@ -54,19 +51,19 @@ func NewTokenIssuer() (*TokenIssuer, error) {
 		return nil, fmt.Errorf("unable to parse duration %s", defaultDuration)
 	}
 
-	if _, errStat := os.Stat(privateKeyPath); os.IsNotExist(errStat) {
+	if _, errStat := os.Stat(PrivateKeyLocation); os.IsNotExist(errStat) {
 		return nil, errStat
 	}
 
-	if _, errStat := os.Stat(publicKeyPath); os.IsNotExist(errStat) {
+	if _, errStat := os.Stat(PublicKeyLocation); os.IsNotExist(errStat) {
 		return nil, errStat
 	}
 
-	privatePEM, errPrivateKey := os.ReadFile(privateKeyPath)
+	privatePEM, errPrivateKey := os.ReadFile(PrivateKeyLocation)
 	if errPrivateKey != nil {
 		return nil, fmt.Errorf("unable to read ECDSA private key %w", errPrivateKey)
 	}
-	publicPEM, errPublicKey := os.ReadFile(publicKeyPath)
+	publicPEM, errPublicKey := os.ReadFile(PublicKeyLocation)
 	if errPublicKey != nil {
 		return nil, fmt.Errorf("unable to read ECDSA public key %w", errPublicKey)
 	}

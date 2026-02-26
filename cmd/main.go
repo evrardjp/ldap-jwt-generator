@@ -6,10 +6,11 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"ldap-jwt-generator/internal/handlers"
 	"ldap-jwt-generator/internal/jwt"
 	"ldap-jwt-generator/internal/ldap"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 const listeningPort = 8080
@@ -49,12 +50,12 @@ func main() {
 	// /token endpoint with middleware chain:
 	// 1. WithTenantConfig: Extract and validate Tenant-Id header (lookup in registry)
 	// 2. WithBasicAuth: Authenticate user via LDAP with tenant config
-	// 3. WithAuthorization: Fetch user groups from LDAP
+	// 3. WithGroupEnrichment: Fetch user groups from LDAP
 	// 4. GenerateJWT: Create and return signed JWT token
 	mux.HandleFunc("GET /token",
 		handlers.WithTenantConfig(tenantRegistry,
 			handlers.WithBasicAuth(
-				handlers.WithAuthorization(
+				handlers.WithGroupEnrichment(
 					tokenIssuer.GenerateJWT))))
 
 	// /metrics endpoint for Prometheus monitoring

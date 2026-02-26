@@ -1,4 +1,4 @@
 FROM scratch
 
-COPY ./bin/ldap-jwt-generator /bin/ldap-jwt-generator
-CMD ["ldap-jwt-generator"]
+COPY ./bin/ldap-jwt-generator /ldap-jwt-generator
+CMD ["/ldap-jwt-generator"]

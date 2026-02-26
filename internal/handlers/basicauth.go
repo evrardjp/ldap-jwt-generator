@@ -8,7 +8,7 @@ import (
 )
 
 func WithBasicAuth(next http.HandlerFunc) http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		// Extract tenant authenticator from context (set by WithTenantConfig)
 		authValue := r.Context().Value(TenantAuthenticatorKey)
 		if authValue == nil {
@@ -47,5 +47,5 @@ func WithBasicAuth(next http.HandlerFunc) http.HandlerFunc {
 		// authentication and send a 401 Unauthorized response.
 		w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-	})
+	}
 }

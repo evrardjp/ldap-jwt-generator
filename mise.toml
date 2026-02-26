@@ -6,15 +6,11 @@ golangci-lint = "latest"
 description = "Build the ldap-jwt-generator binary"
 run = [
   "go mod download",
-  "go build -o bin/ldap-jwt-generator -ldflags='-s -w' cmd/main.go"
+  "CGO_ENABLED=0 go build -o bin/ldap-jwt-generator -ldflags='-s -w -extldflags \"-static\"' cmd/main.go",
+  "docker build -t ldap-jwt-generator:latest ."
 ]
 
-[tasks."build:container"]
-description = "Build container image"
-depends = ["build"]
-run = "docker build -t ldap-jwt-generator:latest ."
-
-[tasks."lint"]
+[tasks."test:lint"]
 description = "Run linters"
 run = [
   "go fmt ./...",
@@ -24,72 +20,129 @@ run = [
 
 [tasks."test:unit"]
 description = "Run unit tests"
-run = "go test -v -cover -race ./internal/..."
+run = "go test -v -cover -race ./..." # should include ./test/e2e/token_mock_test.go ./test/e2e/e2e_suite_test.go"
 
-[tasks."test:integration"]
-description = "Run integration tests"
-depends = ["test:unit"]
-run = "go test -v -tags=integration ./test/e2e/..."
+[tasks."test:short"]
+description = "Run short tests"
+depends = ["lint", "test:unit"]
+
+[tasks."test:e2e"]
+description = "Run e2e tests (requires containers)"
+depends = ["build:container", "dev:ldap:start"]
+depends_post = ["dev:ldap:stop"]
+run = "go test -v ./test/e2e/token_e2e_test.go"
 
 [tasks."test:all"]
 description = "Run all tests"
-depends = ["lint", "test:unit", "test:integration"]
-
-[tasks."test:coverage"]
-description = "Run tests with coverage report"
-run = [
-  "go test -v -coverprofile=coverage.out -covermode=atomic ./...",
-  "go tool cover -html=coverage.out -o coverage.html",
-  "echo 'Coverage report: coverage.html'"
-]
-
-[tasks."validate"]
-description = "Validate tenant configs"
-run = "go run scripts/validate-configs.go"
+depends = ["test:short", "test:e2e"]
 
 [tasks."clean"]
 description = "Clean build artifacts"
 run = [
   "rm -rf bin/",
-  "rm -f coverage.out coverage.html"
+  "rm -f coverage.out coverage.html",
+  "docker rmi ldap-jwt-generator:latest",
 ]
 
-[tasks."dev:prerequisites"]
-description = "Run ldap server"
-run = "bin/ldap-jwt-generator"
-
-[tasks."dev:run"]
-description = "Run container locally"
-depends = ["build:container"]
+[tasks."dev:api:start"]
+description = "Start this API for local testing"
 run = """
-docker run --rm -p 8080:8080 \
-  -v ./test/configs:/etc/ldap-configs:ro \
-  -v ./test/keys:/var/run/secrets/ecdsa:ro \
-  -e LDAP_SERVER=ldap.example.com \
-  -e LDAP_PORT=389 \
-  -e LDAP_BINDDN="CN=svc,DC=example,DC=org" \
-  -e LDAP_PASSWD=password \
-  -e JWT_ISSUER_FQDN=localhost:8080 \
-  -e TOKEN_LIFETIME=4h \
+docker run -d \
+  --name ldap-jwt-test-api \
+  --network ldap-jwt-test \
+  -p 8080:8080 \
+  -e LDAP_SERVER="ldap-jwt-test-ldap" \
+  -e LDAP_PORT="389" \
+  -e LDAP_BINDDN="cn=admin,dc=example,dc=org" \
+  -e LDAP_PASSWD="admin" \
+  -e JWT_ISSUER_FQDN="ldap-jwt-generator.test.local" \
+  -e TOKEN_LIFETIME="4h" \
+  -e INSECURE_LDAP="true" \
+  -v $(pwd)/test/fixtures/tenant-configs:/etc/ldap-jwt-generator/ldap-configs:ro \
+  -v $(pwd)/test/fixtures/signing-keys:/etc/ldap-jwt-generator/signing-keys:ro \
   ldap-jwt-generator:latest
 """
 
-[tasks."ci"]
-description = "Run CI pipeline"
-run = [
-  { task = "test:all" },
-  { task = "build:container" }
-]
+[tasks."dev:api:stop"]
+description = "Stop this API server after local testing"
+run = """
+docker stop ldap-jwt-test-api 2>/dev/null || true
+docker rm ldap-jwt-test-api 2>/dev/null || true
+"""
 
-[tasks."release"]
-description = "Build and tag container image with version after running all its tests"
-depends = ["build:container", "test:all", "tag:git", "tag:container"]
-run = [
-  "docker tag ldap-jwt-generator:latest ldap-jwt-generator:{{env.VERSION}}"
-]
+#-v $(pwd)/test/ecdsa-pub.pem:/etc/ldap-jwt-generator/signing-keys/ecdsa-public-key.pem:ro \
+#-v $(pwd)/test/fixtures/signing-keys/ecdsa-key.pem:/etc/ldap-jwt-generator/signing-keys/:ro \
+
+[tasks."dev:ldap:start"]
+description = "Start docker network and LDAP server for e2e testing"
+run = """
+# Create network
+docker network create ldap-jwt-test 2>/dev/null || true
+
+# Start OpenLDAP
+docker run -d \
+  --name ldap-jwt-test-ldap \
+  --network ldap-jwt-test \
+  -p 389:389 \
+  -e LDAP_ORGANISATION="Example Inc." \
+  -e LDAP_DOMAIN="example.org" \
+  -e LDAP_ADMIN_PASSWORD="admin" \
+  -e LDAP_CONFIG_PASSWORD="config" \
+  -e LDAP_TLS="false" \
+  osixia/openldap:1.5.0
+
+echo "Waiting for LDAP server to start..."
+sleep 8
+
+# Load test data into LDAP
+cat test/e2e/ldif/test-data.ldif | docker exec -i ldap-jwt-test-ldap ldapadd -x -D "cn=admin,dc=example,dc=org" -w admin
+
+echo "LDAP test data loaded"
+
+echo "Waiting for API to connect to LDAP..."
+sleep 3
+
+echo ""
+echo "LDAP server and API are running!"
+echo "LDAP: ldap://localhost:389"
+echo "API: http://localhost:8080"
+echo ""
+echo "Check logs with: mise run dev:ldap:logs"
+"""
+
+[tasks."dev:ldap:stop"]
+description = "Stop LDAP server and docker network"
+run = """
+docker stop ldap-jwt-test-ldap 2>/dev/null || true
+docker rm ldap-jwt-test-ldap 2>/dev/null || true
+docker network rm ldap-jwt-test 2>/dev/null || true
+echo "Services stopped, removed, and network removed"
+"""
+
+[tasks."dev:logs"]
+description = "Show logs from LDAP and API containers"
+run = """
+echo "=== LDAP logs ==="
+docker logs ldap-jwt-test-ldap 2>&1 | tail -20
+echo ""
+echo "=== API logs ==="
+docker logs ldap-jwt-test-api 2>&1 | tail -20
+"""
 
 [tasks."tag:git"]
 description = "Tag the git repo on current branch"
+usage = '''
+arg "<version>" help="Target version"
+'''
 run = [
-  #"git tag {{env.VERSION}} HEAD"
+  "git tag ${usage.version?} HEAD"
+]
+
+[tasks."tag:container"]
+description = "Tag the git repo on current branch"
+usage = '''
+arg "<version>" help="Target version"
+'''
+run = [
+  "docker tag ldap-jwt-generation:latest ldap-jwt-generator:${usage.version?}"
 ]

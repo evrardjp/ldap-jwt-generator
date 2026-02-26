@@ -307,7 +307,7 @@ func TestWithAuthorization_FetchesGroups(t *testing.T) {
 	req := httptest.NewRequest("GET", "/token", nil).WithContext(ctx)
 	w := httptest.NewRecorder()
 
-	handler := WithAuthorization(next)
+	handler := WithGroupEnrichment(next)
 	handler.ServeHTTP(w, req)
 
 	if !nextCalled {
@@ -344,7 +344,7 @@ func TestWithAuthorization_GroupFetchError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/token", nil).WithContext(ctx)
 	w := httptest.NewRecorder()
 
-	handler := WithAuthorization(next)
+	handler := WithGroupEnrichment(next)
 	handler.ServeHTTP(w, req)
 
 	if nextCalled {
@@ -414,7 +414,7 @@ func TestMiddlewareChain(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Chain: BasicAuth -> Authorization -> FinalHandler
-	handler := WithBasicAuth(WithAuthorization(finalHandler))
+	handler := WithBasicAuth(WithGroupEnrichment(finalHandler))
 	handler.ServeHTTP(w, req)
 
 	if !finalHandlerCalled {

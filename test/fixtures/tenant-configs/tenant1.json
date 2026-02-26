@@ -1,0 +1,10 @@
+{
+  "userBase": "ou=Users,dc=example,dc=org",
+  "userFilter": "(cn=%s)",
+  "groupSources": [
+    {
+      "base": "ou=Groups,dc=example,dc=org",
+      "filter": "(&(objectClass=groupOfNames)(member=%s))"
+    }
+  ]
+}

@@ -1,160 +1,70 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kubi-deployment
-  namespace: kube-system
+  name: ldap-jwt-generator-deployment
+  namespace: default
   labels:
-    app: kubi
+    app: ldap-jwt-generator
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: kubi
+      app: ldap-jwt-generator
   template:
     metadata:
       labels:
-        app: kubi
+        app: ldap-jwt-generator
     spec:
-      serviceAccountName: kubi-user
+      serviceAccountName: default
       containers:
-        - name: kubi-api
-          image: cagip/kubi-api:v1.28.0
+        - name: ldap-jwt-generator
+          image: cagip/ldap-jwt-generator:latest
           ports:
             - containerPort: 8000
-          livenessProbe:
-            httpGet:
-              path: /ca
-              port: 8000
-              scheme: HTTPS
-            initialDelaySeconds: 3
-            periodSeconds: 1
-          volumeMounts:
-            - name: kubi-tls
-              mountPath: "/var/run/secrets/certs"
-              readOnly: true
-            - name: kubi-encryption
-              mountPath: "/var/run/secrets/ecdsa"
-              readOnly: true
+#          livenessProbe:
+#            httpGet:
+#              path: /ca
+#              port: 8000
+#              scheme: HTTPS
+#            initialDelaySeconds: 3
+#            periodSeconds: 1
           envFrom:
-            - configMapRef:
-                name: kubi-config
-          env:
-            - name: LDAP_PASSWD
-              valueFrom:
-                secretKeyRef:
-                  name: kubi-secret
-                  key: ldap_passwd
-        - name: kubi-webhook
-          image: cagip/kubi-webhook:v1.28.0
-          ports:
-            - containerPort: 8001
+            - secretRef:
+                name: ldap-jwt-generator-ldap-base-config # contains a password, so it's better to be a secret :)
           volumeMounts:
-            - name: kubi-tls
-              mountPath: "/var/run/secrets/certs"
+            - name: ldap-jwt-generator-tenant-registry
+              mountPath: "/etc/ldap-jwt-generator/ldap-configs"
               readOnly: true
-            - name: kubi-encryption
-              mountPath: "/var/run/secrets/ecdsa"
+            - name: ldap-jwt-generator-jwt-signing-keys
+              mountPath: "/etc/ldap-jwt-generator/signing-keys"
               readOnly: true
-
-          envFrom:
-            - configMapRef:
-                name: kubi-config
-          env:
-            - name: LDAP_PASSWD
-              valueFrom:
-                secretKeyRef:
-                  name: kubi-secret
-                  key: ldap_passwd
-        - name: kubi-operator
-          image: cagip/kubi-operator:v1.28.0
-          ports:
-            - containerPort: 8002
-          volumeMounts:
-            - name: kubi-tls
-              mountPath: "/var/run/secrets/certs"
-              readOnly: true
-            - name: kubi-encryption
-              mountPath: "/var/run/secrets/ecdsa"
-              readOnly: true
-          envFrom:
-            - configMapRef:
-                name: kubi-config
-          env:
-            - name: LDAP_PASSWD
-              valueFrom:
-                secretKeyRef:
-                  name: kubi-secret
-                  key: ldap_passwd
       volumes:
-        - name: kubi-tls
+        - name: secret-volume
           secret:
-            secretName: kubi
-        - name: kubi-encryption
+            secretName: ldap-jwt-generator-tenant-registry
+        - name: ldap-jwt-generator-signing-keys
           secret:
-            secretName: kubi-encryption-secret
+            secretName: ldap-jwt-generator-signing-keys
+            items:
+              - key: PRIVATE_KEY #Adapt this based on your secret "ldap-jwt-generator-signing-keys" 's key/values
+                path: ecdsa-private-key.pem # Convention, do not edit (unless you change jwt\types.go)
+              - key: PUBLIC_KEY #Adapt this based on your secret "ldap-jwt-generator-signing-keys" 's key/values
+                path: ecdsa-public-key.pem # Convention, do not edit (unless you change jwt\types.go)
 
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: kubi-operator
-  namespace: kube-system
-  labels:
-    app: kubi-operator
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: kubi-operator
-  template:
-    metadata:
-      labels:
-        app: kubi-operator
-    spec:
-      serviceAccountName: kubi-user
-      containers:
-        - name: kubi-operator
-          image: cagip/kubi-operator:v1.28.0
-          ports:
-            - containerPort: 8002
-          volumeMounts:
-            - name: kubi-tls
-              mountPath: "/var/run/secrets/certs"
-              readOnly: true
-            - name: kubi-encryption
-              mountPath: "/var/run/secrets/ecdsa"
-              readOnly: true
-          envFrom:
-            - configMapRef:
-                name: kubi-config
-          env:
-            - name: LDAP_PASSWD
-              valueFrom:
-                secretKeyRef:
-                  name: kubi-secret
-                  key: ldap_passwd
-      volumes:
-        - name: kubi-tls
-          secret:
-            secretName: kubi
-        - name: kubi-encryption
-          secret:
-            secretName: kubi-encryption-secret
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: kubi-svc
-  namespace: kube-system
+  name: ldap-jwt-generator-svc
+  namespace: default
   labels:
-    app: kubi
+    app: ldap-jwt-generator
 spec:
-  type: NodePort
+  type: ClusterIP
   ports:
-    - name: https
+    - name: http
       port: 8000
       targetPort: 8000
       protocol: TCP
-      nodePort: 30003
   selector:
-    app: kubi
+    app: ldap-jwt-generator

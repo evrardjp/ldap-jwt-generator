@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  openldap:
+    image: osixia/openldap:1.5.0
+    container_name: ldap-jwt-test-ldap
+    environment:
+      LDAP_ORGANISATION: "Example Inc."
+      LDAP_DOMAIN: "example.org"
+      LDAP_ADMIN_PASSWORD: "admin"
+      LDAP_CONFIG_PASSWORD: "config"
+      LDAP_READONLY_USER: "false"
+      LDAP_RFC2307BIS_SCHEMA: "false"
+      LDAP_BACKEND: "mdb"
+      LDAP_TLS: "false"
+      LDAP_TLS_VERIFY_CLIENT: "never"
+      LDAP_REPLICATION: "false"
+      KEEP_EXISTING_CONFIG: "false"
+      LDAP_REMOVE_CONFIG_AFTER_SETUP: "true"
+      LDAP_SSL_HELPER_PREFIX: "ldap"
+    volumes:
+      - ./ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom:ro
+    ports:
+      - "389:389"
+    networks:
+      - ldap-jwt-test
+
+  ldap-jwt-api:
+    image: ldap-jwt-generator:latest
+    container_name: ldap-jwt-test-api
+    depends_on:
+      - openldap
+    environment:
+      LDAP_SERVER: "openldap"
+      LDAP_PORT: "389"
+      LDAP_BINDDN: "cn=admin,dc=example,dc=org"
+      LDAP_PASSWD: "admin"
+      JWT_ISSUER_FQDN: "ldap-jwt-generator.test.local"
+      TOKEN_LIFETIME: "4h"
+      INSECURE_LDAP: "true"
+    volumes:
+      - ./tenant-configs:/etc/ldap-jwt-generator/ldap-configs:ro
+      - ../../test/ecdsa-key.pem:/var/run/secrets/ecdsa/ecdsa-key.pem:ro
+      - ../../test/ecdsa-pub.pem:/var/run/secrets/ecdsa/ecdsa-pub.pem:ro
+    ports:
+      - "8080:8080"
+    networks:
+      - ldap-jwt-test
+    restart: on-failure
+
+networks:
+  ldap-jwt-test:
+    driver: bridge

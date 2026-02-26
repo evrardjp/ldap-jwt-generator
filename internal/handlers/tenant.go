@@ -10,8 +10,8 @@ import (
 
 type tenantContextKey string
 
-const TenantAuthenticatorKey tenantContextKey = "tenantAuthenticator"
 const TenantIDKey tenantContextKey = "tenantID"
+const TenantAuthenticatorKey tenantContextKey = "tenantAuthenticator"
 
 // WithTenantConfig extracts Tenant-Id header and looks up authenticator in registry
 func WithTenantConfig(registry ldap.TenantRegistryInterface, next http.HandlerFunc) http.HandlerFunc {
