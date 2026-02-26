@@ -1,4 +1,3 @@
-
 # LDAP-JWT-generator
 
 This is a tool to generate JWT tokens for promote auth.
