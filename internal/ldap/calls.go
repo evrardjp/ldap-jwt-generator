@@ -56,7 +56,9 @@ func (c *LDAPClient) Query(request ldap.SearchRequest) ([]*ldap.Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	results, err := conn.SearchWithPaging(&request, c.PageSize)
 	if err != nil {

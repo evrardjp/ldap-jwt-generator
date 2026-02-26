@@ -27,7 +27,9 @@ func (c *LDAPClient) SearchUsers(baseDN, filter, username string) (*user.Details
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	searchFilter := fmt.Sprintf(filter, username)
 	req := ldap.NewSearchRequest(
@@ -63,7 +65,9 @@ func (c *LDAPClient) SearchGroups(baseDN, filter, userDN string) ([]*ldap.Entry,
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	searchFilter := fmt.Sprintf(filter, userDN)
 
@@ -91,6 +95,9 @@ func (c *LDAPClient) ValidateUserPassword(userDN, password string) error {
 	if err != nil {
 		return fmt.Errorf("invalid password")
 	}
-	conn.Close()
+	if err := conn.Close(); err != nil {
+		// Connection close error after successful bind doesn't affect validation
+		return nil
+	}
 	return nil
 }

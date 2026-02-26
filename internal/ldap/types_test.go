@@ -7,11 +7,11 @@ import (
 
 func TestNewLDAPBaseConfig_ValidEnvironment(t *testing.T) {
 	// Set up valid environment variables
-	os.Setenv("LDAP_SERVER", "ldap.example.com")
-	os.Setenv("LDAP_PORT", "389")
-	os.Setenv("LDAP_BINDDN", "cn=admin,dc=example,dc=com")
-	os.Setenv("LDAP_PASSWD", "secretpassword")
-	os.Setenv("LDAP_PAGE_SIZE", "500")
+	_ = os.Setenv("LDAP_SERVER", "ldap.example.com")
+	_ = os.Setenv("LDAP_PORT", "389")
+	_ = os.Setenv("LDAP_BINDDN", "cn=admin,dc=example,dc=com")
+	_ = os.Setenv("LDAP_PASSWD", "secretpassword")
+	_ = os.Setenv("LDAP_PAGE_SIZE", "500")
 	defer cleanupEnv()
 
 	config, err := NewLDAPBaseConfig()
@@ -47,10 +47,10 @@ func TestNewLDAPBaseConfig_ValidEnvironment(t *testing.T) {
 }
 
 func TestNewLDAPBaseConfig_Port636_SSL(t *testing.T) {
-	os.Setenv("LDAP_SERVER", "ldap.example.com")
-	os.Setenv("LDAP_PORT", "636")
-	os.Setenv("LDAP_BINDDN", "cn=admin,dc=example,dc=com")
-	os.Setenv("LDAP_PASSWD", "secretpassword")
+	_ = os.Setenv("LDAP_SERVER", "ldap.example.com")
+	_ = os.Setenv("LDAP_PORT", "636")
+	_ = os.Setenv("LDAP_BINDDN", "cn=admin,dc=example,dc=com")
+	_ = os.Setenv("LDAP_PASSWD", "secretpassword")
 	defer cleanupEnv()
 
 	config, err := NewLDAPBaseConfig()
@@ -74,10 +74,10 @@ func TestNewLDAPBaseConfig_Port636_SSL(t *testing.T) {
 }
 
 func TestNewLDAPBaseConfig_CustomPort(t *testing.T) {
-	os.Setenv("LDAP_SERVER", "ldap.example.com")
-	os.Setenv("LDAP_PORT", "10389")
-	os.Setenv("LDAP_BINDDN", "cn=admin,dc=example,dc=com")
-	os.Setenv("LDAP_PASSWD", "secretpassword")
+	_ = os.Setenv("LDAP_SERVER", "ldap.example.com")
+	_ = os.Setenv("LDAP_PORT", "10389")
+	_ = os.Setenv("LDAP_BINDDN", "cn=admin,dc=example,dc=com")
+	_ = os.Setenv("LDAP_PASSWD", "secretpassword")
 	defer cleanupEnv()
 
 	config, err := NewLDAPBaseConfig()
@@ -91,11 +91,11 @@ func TestNewLDAPBaseConfig_CustomPort(t *testing.T) {
 }
 
 func TestNewLDAPBaseConfig_InsecureMode(t *testing.T) {
-	os.Setenv("LDAP_SERVER", "ldap.example.com")
-	os.Setenv("LDAP_PORT", "389")
-	os.Setenv("LDAP_BINDDN", "cn=admin,dc=example,dc=com")
-	os.Setenv("LDAP_PASSWD", "secretpassword")
-	os.Setenv("INSECURE_LDAP", "true")
+	_ = os.Setenv("LDAP_SERVER", "ldap.example.com")
+	_ = os.Setenv("LDAP_PORT", "389")
+	_ = os.Setenv("LDAP_BINDDN", "cn=admin,dc=example,dc=com")
+	_ = os.Setenv("LDAP_PASSWD", "secretpassword")
+	_ = os.Setenv("INSECURE_LDAP", "true")
 	defer cleanupEnv()
 
 	config, err := NewLDAPBaseConfig()
@@ -116,10 +116,10 @@ func TestNewLDAPBaseConfig_InsecureMode(t *testing.T) {
 }
 
 func TestNewLDAPBaseConfig_DefaultPageSize(t *testing.T) {
-	os.Setenv("LDAP_SERVER", "ldap.example.com")
-	os.Setenv("LDAP_PORT", "389")
-	os.Setenv("LDAP_BINDDN", "cn=admin,dc=example,dc=com")
-	os.Setenv("LDAP_PASSWD", "secretpassword")
+	_ = os.Setenv("LDAP_SERVER", "ldap.example.com")
+	_ = os.Setenv("LDAP_PORT", "389")
+	_ = os.Setenv("LDAP_BINDDN", "cn=admin,dc=example,dc=com")
+	_ = os.Setenv("LDAP_PASSWD", "secretpassword")
 	// Don't set LDAP_PAGE_SIZE
 	defer cleanupEnv()
 
@@ -135,9 +135,9 @@ func TestNewLDAPBaseConfig_DefaultPageSize(t *testing.T) {
 
 func TestNewLDAPBaseConfig_MissingServer(t *testing.T) {
 	// Don't set LDAP_SERVER
-	os.Setenv("LDAP_PORT", "389")
-	os.Setenv("LDAP_BINDDN", "cn=admin,dc=example,dc=com")
-	os.Setenv("LDAP_PASSWD", "secretpassword")
+	_ = os.Setenv("LDAP_PORT", "389")
+	_ = os.Setenv("LDAP_BINDDN", "cn=admin,dc=example,dc=com")
+	_ = os.Setenv("LDAP_PASSWD", "secretpassword")
 	defer cleanupEnv()
 
 	_, err := NewLDAPBaseConfig()
@@ -150,10 +150,10 @@ func TestNewLDAPBaseConfig_MissingServer(t *testing.T) {
 }
 
 func TestNewLDAPBaseConfig_EmptyPort(t *testing.T) {
-	os.Setenv("LDAP_SERVER", "ldap.example.com")
-	os.Setenv("LDAP_PORT", "")
-	os.Setenv("LDAP_BINDDN", "cn=admin,dc=example,dc=com")
-	os.Setenv("LDAP_PASSWD", "secretpassword")
+	_ = os.Setenv("LDAP_SERVER", "ldap.example.com")
+	_ = os.Setenv("LDAP_PORT", "")
+	_ = os.Setenv("LDAP_BINDDN", "cn=admin,dc=example,dc=com")
+	_ = os.Setenv("LDAP_PASSWD", "secretpassword")
 	defer cleanupEnv()
 
 	_, err := NewLDAPBaseConfig()
@@ -163,10 +163,10 @@ func TestNewLDAPBaseConfig_EmptyPort(t *testing.T) {
 }
 
 func TestNewLDAPBaseConfig_InvalidPort(t *testing.T) {
-	os.Setenv("LDAP_SERVER", "ldap.example.com")
-	os.Setenv("LDAP_PORT", "not-a-number")
-	os.Setenv("LDAP_BINDDN", "cn=admin,dc=example,dc=com")
-	os.Setenv("LDAP_PASSWD", "secretpassword")
+	_ = os.Setenv("LDAP_SERVER", "ldap.example.com")
+	_ = os.Setenv("LDAP_PORT", "not-a-number")
+	_ = os.Setenv("LDAP_BINDDN", "cn=admin,dc=example,dc=com")
+	_ = os.Setenv("LDAP_PASSWD", "secretpassword")
 	defer cleanupEnv()
 
 	_, err := NewLDAPBaseConfig()
@@ -176,11 +176,11 @@ func TestNewLDAPBaseConfig_InvalidPort(t *testing.T) {
 }
 
 func TestNewLDAPBaseConfig_InvalidInsecureFlag(t *testing.T) {
-	os.Setenv("LDAP_SERVER", "ldap.example.com")
-	os.Setenv("LDAP_PORT", "389")
-	os.Setenv("LDAP_BINDDN", "cn=admin,dc=example,dc=com")
-	os.Setenv("LDAP_PASSWD", "secretpassword")
-	os.Setenv("INSECURE_LDAP", "not-a-bool")
+	_ = os.Setenv("LDAP_SERVER", "ldap.example.com")
+	_ = os.Setenv("LDAP_PORT", "389")
+	_ = os.Setenv("LDAP_BINDDN", "cn=admin,dc=example,dc=com")
+	_ = os.Setenv("LDAP_PASSWD", "secretpassword")
+	_ = os.Setenv("INSECURE_LDAP", "not-a-bool")
 	defer cleanupEnv()
 
 	_, err := NewLDAPBaseConfig()
@@ -190,10 +190,10 @@ func TestNewLDAPBaseConfig_InvalidInsecureFlag(t *testing.T) {
 }
 
 func TestNewLDAPBaseConfig_MissingBindDN(t *testing.T) {
-	os.Setenv("LDAP_SERVER", "ldap.example.com")
-	os.Setenv("LDAP_PORT", "389")
+	_ = os.Setenv("LDAP_SERVER", "ldap.example.com")
+	_ = os.Setenv("LDAP_PORT", "389")
 	// Don't set LDAP_BINDDN
-	os.Setenv("LDAP_PASSWD", "secretpassword")
+	_ = os.Setenv("LDAP_PASSWD", "secretpassword")
 	defer cleanupEnv()
 
 	_, err := NewLDAPBaseConfig()
@@ -203,10 +203,10 @@ func TestNewLDAPBaseConfig_MissingBindDN(t *testing.T) {
 }
 
 func TestNewLDAPBaseConfig_BindDNTooShort(t *testing.T) {
-	os.Setenv("LDAP_SERVER", "ldap.example.com")
-	os.Setenv("LDAP_PORT", "389")
-	os.Setenv("LDAP_BINDDN", "x") // Too short (< 2 chars)
-	os.Setenv("LDAP_PASSWD", "secretpassword")
+	_ = os.Setenv("LDAP_SERVER", "ldap.example.com")
+	_ = os.Setenv("LDAP_PORT", "389")
+	_ = os.Setenv("LDAP_BINDDN", "x") // Too short (< 2 chars)
+	_ = os.Setenv("LDAP_PASSWD", "secretpassword")
 	defer cleanupEnv()
 
 	_, err := NewLDAPBaseConfig()
@@ -216,9 +216,9 @@ func TestNewLDAPBaseConfig_BindDNTooShort(t *testing.T) {
 }
 
 func TestNewLDAPBaseConfig_MissingPassword(t *testing.T) {
-	os.Setenv("LDAP_SERVER", "ldap.example.com")
-	os.Setenv("LDAP_PORT", "389")
-	os.Setenv("LDAP_BINDDN", "cn=admin,dc=example,dc=com")
+	_ = os.Setenv("LDAP_SERVER", "ldap.example.com")
+	_ = os.Setenv("LDAP_PORT", "389")
+	_ = os.Setenv("LDAP_BINDDN", "cn=admin,dc=example,dc=com")
 	// Don't set LDAP_PASSWD
 	defer cleanupEnv()
 
@@ -229,10 +229,10 @@ func TestNewLDAPBaseConfig_MissingPassword(t *testing.T) {
 }
 
 func TestNewLDAPBaseConfig_PasswordTooShort(t *testing.T) {
-	os.Setenv("LDAP_SERVER", "ldap.example.com")
-	os.Setenv("LDAP_PORT", "389")
-	os.Setenv("LDAP_BINDDN", "cn=admin,dc=example,dc=com")
-	os.Setenv("LDAP_PASSWD", "x") // Too short (< 2 chars)
+	_ = os.Setenv("LDAP_SERVER", "ldap.example.com")
+	_ = os.Setenv("LDAP_PORT", "389")
+	_ = os.Setenv("LDAP_BINDDN", "cn=admin,dc=example,dc=com")
+	_ = os.Setenv("LDAP_PASSWD", "x") // Too short (< 2 chars)
 	defer cleanupEnv()
 
 	_, err := NewLDAPBaseConfig()
@@ -242,11 +242,11 @@ func TestNewLDAPBaseConfig_PasswordTooShort(t *testing.T) {
 }
 
 func TestNewLDAPBaseConfig_InvalidPageSize(t *testing.T) {
-	os.Setenv("LDAP_SERVER", "ldap.example.com")
-	os.Setenv("LDAP_PORT", "389")
-	os.Setenv("LDAP_BINDDN", "cn=admin,dc=example,dc=com")
-	os.Setenv("LDAP_PASSWD", "secretpassword")
-	os.Setenv("LDAP_PAGE_SIZE", "not-a-number")
+	_ = os.Setenv("LDAP_SERVER", "ldap.example.com")
+	_ = os.Setenv("LDAP_PORT", "389")
+	_ = os.Setenv("LDAP_BINDDN", "cn=admin,dc=example,dc=com")
+	_ = os.Setenv("LDAP_PASSWD", "secretpassword")
+	_ = os.Setenv("LDAP_PAGE_SIZE", "not-a-number")
 	defer cleanupEnv()
 
 	_, err := NewLDAPBaseConfig()
@@ -424,10 +424,10 @@ func TestTenantConfig_Validate_SecondGroupSourceInvalid(t *testing.T) {
 
 // Helper function to clean up environment variables
 func cleanupEnv() {
-	os.Unsetenv("LDAP_SERVER")
-	os.Unsetenv("LDAP_PORT")
-	os.Unsetenv("LDAP_BINDDN")
-	os.Unsetenv("LDAP_PASSWD")
-	os.Unsetenv("LDAP_PAGE_SIZE")
-	os.Unsetenv("INSECURE_LDAP")
+	_ = os.Unsetenv("LDAP_SERVER")
+	_ = os.Unsetenv("LDAP_PORT")
+	_ = os.Unsetenv("LDAP_BINDDN")
+	_ = os.Unsetenv("LDAP_PASSWD")
+	_ = os.Unsetenv("LDAP_PAGE_SIZE")
+	_ = os.Unsetenv("INSECURE_LDAP")
 }

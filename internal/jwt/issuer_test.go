@@ -141,13 +141,13 @@ func TestGenerateJWT_User(t *testing.T) {
 	if len(claims.Audience) != 1 || claims.Audience[0] != testFQDN {
 		t.Errorf("Expected audience ['ldap-jwt-generator.example.com'], got %v", claims.Audience)
 	}
-	if claims.ExpiresAt == nil || claims.ExpiresAt.Time.Before(time.Now()) {
+	if claims.ExpiresAt == nil || claims.ExpiresAt.Before(time.Now()) {
 		t.Error("Token should have valid expiration in the future")
 	}
-	if claims.NotBefore == nil || claims.NotBefore.Time.After(time.Now().Add(time.Minute)) {
+	if claims.NotBefore == nil || claims.NotBefore.After(time.Now().Add(time.Minute)) {
 		t.Error("Token nbf should be now or in the past")
 	}
-	if claims.IssuedAt == nil || claims.IssuedAt.Time.After(time.Now().Add(time.Minute)) {
+	if claims.IssuedAt == nil || claims.IssuedAt.After(time.Now().Add(time.Minute)) {
 		t.Error("Token iat should be now or in the past")
 	}
 	if claims.ID == "" {
@@ -190,13 +190,13 @@ func TestGenerateJWT_EmptyUser(t *testing.T) {
 	if len(claims.Audience) != 1 || claims.Audience[0] != testFQDN {
 		t.Errorf("Expected audience ['ldap-jwt-generator.example.com'], got %v", claims.Audience)
 	}
-	if claims.ExpiresAt == nil || claims.ExpiresAt.Time.Before(time.Now()) {
+	if claims.ExpiresAt == nil || claims.ExpiresAt.Before(time.Now()) {
 		t.Error("Token should have valid expiration in the future")
 	}
-	if claims.NotBefore == nil || claims.NotBefore.Time.After(time.Now().Add(time.Minute)) {
+	if claims.NotBefore == nil || claims.NotBefore.After(time.Now().Add(time.Minute)) {
 		t.Error("Token nbf should be now or in the past")
 	}
-	if claims.IssuedAt == nil || claims.IssuedAt.Time.After(time.Now().Add(time.Minute)) {
+	if claims.IssuedAt == nil || claims.IssuedAt.After(time.Now().Add(time.Minute)) {
 		t.Error("Token iat should be now or in the past")
 	}
 	if claims.ID == "" {
@@ -271,18 +271,18 @@ func TestGenerateJWT_TokenExpiration(t *testing.T) {
 
 	// Verify expiration is approximately 4 hours from now
 	expectedExpiry := beforeGeneration.Add(4 * time.Hour)
-	if claims.ExpiresAt.Time.Before(expectedExpiry.Add(-time.Minute)) || claims.ExpiresAt.Time.After(afterGeneration.Add(4*time.Hour).Add(time.Minute)) {
-		t.Errorf("Token expiration not within expected range. Expected around %v, got %v", expectedExpiry, claims.ExpiresAt.Time)
+	if claims.ExpiresAt.Before(expectedExpiry.Add(-time.Minute)) || claims.ExpiresAt.After(afterGeneration.Add(4*time.Hour).Add(time.Minute)) {
+		t.Errorf("Token expiration not within expected range. Expected around %v, got %v", expectedExpiry, claims.ExpiresAt)
 	}
 
 	// Verify issued at is recent
-	if claims.IssuedAt.Time.Before(beforeGeneration.Add(-time.Second)) || claims.IssuedAt.Time.After(afterGeneration.Add(time.Second)) {
-		t.Errorf("Token iat not within expected range. Expected between %v and %v, got %v", beforeGeneration, afterGeneration, claims.IssuedAt.Time)
+	if claims.IssuedAt.Before(beforeGeneration.Add(-time.Second)) || claims.IssuedAt.After(afterGeneration.Add(time.Second)) {
+		t.Errorf("Token iat not within expected range. Expected between %v and %v, got %v", beforeGeneration, afterGeneration, claims.IssuedAt)
 	}
 
 	// Verify not before is recent
-	if claims.NotBefore.Time.Before(beforeGeneration.Add(-time.Second)) || claims.NotBefore.Time.After(afterGeneration.Add(time.Second)) {
-		t.Errorf("Token nbf not within expected range. Expected between %v and %v, got %v", beforeGeneration, afterGeneration, claims.NotBefore.Time)
+	if claims.NotBefore.Before(beforeGeneration.Add(-time.Second)) || claims.NotBefore.After(afterGeneration.Add(time.Second)) {
+		t.Errorf("Token nbf not within expected range. Expected between %v and %v, got %v", beforeGeneration, afterGeneration, claims.NotBefore)
 	}
 }
 

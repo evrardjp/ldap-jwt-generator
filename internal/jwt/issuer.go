@@ -80,7 +80,9 @@ func (issuer *TokenIssuer) GenerateJWT(w http.ResponseWriter, r *http.Request) {
 	// Return token
 	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Content-Type", "text/plain")
-	io.WriteString(w, signedToken)
+	if _, err := io.WriteString(w, signedToken); err != nil {
+		slog.Error("failed to write token response", "error", err)
+	}
 }
 
 // generateJTI creates a unique token identifier
