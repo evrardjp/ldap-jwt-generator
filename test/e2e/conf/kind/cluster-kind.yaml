@@ -1,0 +1,25 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+  image: kindest/node:v1.28.0
+  extraPortMappings: #To expose kubi-api service
+  - containerPort: 30003
+    hostPort: 30003
+    listenAddress: "0.0.0.0" # Optional, defaults to "0.0.0.0"
+    protocol: tcp # Optional, defaults to tcp
+  extraMounts:
+    - hostPath: test/e2e/conf/kind/apiserver
+      containerPath: /etc/kubernetes/additionals
+  kubeadmConfigPatches:
+  - |
+    kind: ClusterConfiguration
+    apiServer:
+      extraArgs:
+        authentication-token-webhook-config-file: /etc/kubernetes/additionals/webhook.yaml
+      extraVolumes:
+        - name: "some-volume"
+          hostPath: "/etc/kubernetes/additionals/webhook.yaml"
+          mountPath: "/etc/kubernetes/additionals/webhook.yaml"
+          readOnly: false
+          pathType: File

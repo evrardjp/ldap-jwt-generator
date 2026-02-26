@@ -1,0 +1,160 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubi-deployment
+  namespace: kube-system
+  labels:
+    app: kubi
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: kubi
+  template:
+    metadata:
+      labels:
+        app: kubi
+    spec:
+      serviceAccountName: kubi-user
+      containers:
+        - name: kubi-api
+          image: cagip/kubi-api:v1.28.0
+          ports:
+            - containerPort: 8000
+          livenessProbe:
+            httpGet:
+              path: /ca
+              port: 8000
+              scheme: HTTPS
+            initialDelaySeconds: 3
+            periodSeconds: 1
+          volumeMounts:
+            - name: kubi-tls
+              mountPath: "/var/run/secrets/certs"
+              readOnly: true
+            - name: kubi-encryption
+              mountPath: "/var/run/secrets/ecdsa"
+              readOnly: true
+          envFrom:
+            - configMapRef:
+                name: kubi-config
+          env:
+            - name: LDAP_PASSWD
+              valueFrom:
+                secretKeyRef:
+                  name: kubi-secret
+                  key: ldap_passwd
+        - name: kubi-webhook
+          image: cagip/kubi-webhook:v1.28.0
+          ports:
+            - containerPort: 8001
+          volumeMounts:
+            - name: kubi-tls
+              mountPath: "/var/run/secrets/certs"
+              readOnly: true
+            - name: kubi-encryption
+              mountPath: "/var/run/secrets/ecdsa"
+              readOnly: true
+
+          envFrom:
+            - configMapRef:
+                name: kubi-config
+          env:
+            - name: LDAP_PASSWD
+              valueFrom:
+                secretKeyRef:
+                  name: kubi-secret
+                  key: ldap_passwd
+        - name: kubi-operator
+          image: cagip/kubi-operator:v1.28.0
+          ports:
+            - containerPort: 8002
+          volumeMounts:
+            - name: kubi-tls
+              mountPath: "/var/run/secrets/certs"
+              readOnly: true
+            - name: kubi-encryption
+              mountPath: "/var/run/secrets/ecdsa"
+              readOnly: true
+          envFrom:
+            - configMapRef:
+                name: kubi-config
+          env:
+            - name: LDAP_PASSWD
+              valueFrom:
+                secretKeyRef:
+                  name: kubi-secret
+                  key: ldap_passwd
+      volumes:
+        - name: kubi-tls
+          secret:
+            secretName: kubi
+        - name: kubi-encryption
+          secret:
+            secretName: kubi-encryption-secret
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubi-operator
+  namespace: kube-system
+  labels:
+    app: kubi-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kubi-operator
+  template:
+    metadata:
+      labels:
+        app: kubi-operator
+    spec:
+      serviceAccountName: kubi-user
+      containers:
+        - name: kubi-operator
+          image: cagip/kubi-operator:v1.28.0
+          ports:
+            - containerPort: 8002
+          volumeMounts:
+            - name: kubi-tls
+              mountPath: "/var/run/secrets/certs"
+              readOnly: true
+            - name: kubi-encryption
+              mountPath: "/var/run/secrets/ecdsa"
+              readOnly: true
+          envFrom:
+            - configMapRef:
+                name: kubi-config
+          env:
+            - name: LDAP_PASSWD
+              valueFrom:
+                secretKeyRef:
+                  name: kubi-secret
+                  key: ldap_passwd
+      volumes:
+        - name: kubi-tls
+          secret:
+            secretName: kubi
+        - name: kubi-encryption
+          secret:
+            secretName: kubi-encryption-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubi-svc
+  namespace: kube-system
+  labels:
+    app: kubi
+spec:
+  type: NodePort
+  ports:
+    - name: https
+      port: 8000
+      targetPort: 8000
+      protocol: TCP
+      nodePort: 30003
+  selector:
+    app: kubi
