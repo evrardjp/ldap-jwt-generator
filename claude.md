@@ -515,3 +515,4 @@ filter := "(cn=" + username + ")"
 
 **Last Updated:** 2026-02-26
 **Maintained By:** Project maintainers (see git commit history)
+**Created By:** Jean-Philippe Evrard (see git commit history)
