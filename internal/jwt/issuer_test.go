@@ -68,10 +68,10 @@ func TestGenerateJWT_User(t *testing.T) {
 
 	// Create admin user (member of admin group)
 	userDetails := &user.Details{
-		Username: "admin-user",
-		Email:    "admin@example.com",
-		UserDN:   "CN=Admin User,OU=Users,DC=example,DC=org",
-		Groups:   []string{"ADMIN_KUBERNETES", "ALL_USERS"},
+		Name:   "admin-user",
+		Email:  "admin@example.com",
+		DN:     "CN=Admin Name,OU=Users,DC=example,DC=org",
+		Groups: []string{"ADMIN_KUBERNETES", "ALL_USERS"},
 	}
 
 	ctx := createContextWithUserAndTenant(userDetails, "tenant1")
@@ -118,8 +118,8 @@ func TestGenerateJWT_User(t *testing.T) {
 	if claims.Contact != "admin@example.com" {
 		t.Errorf("Expected email 'admin@example.com', got '%s'", claims.Contact)
 	}
-	if claims.UserDN != "CN=Admin User,OU=Users,DC=example,DC=org" {
-		t.Errorf("Expected userDN 'CN=Admin User,OU=Users,DC=example,DC=org', got '%s'", claims.UserDN)
+	if claims.UserDN != "CN=Admin Name,OU=Users,DC=example,DC=org" {
+		t.Errorf("Expected userDN 'CN=Admin Name,OU=Users,DC=example,DC=org', got '%s'", claims.UserDN)
 	}
 	if claims.Tenant != "tenant1" {
 		t.Errorf("Expected tenantID 'tenant1', got '%s'", claims.Tenant)
@@ -226,10 +226,10 @@ func TestGenerateJWT_MissingTenantContext(t *testing.T) {
 	issuer := createTestTokenIssuer(t)
 
 	userDetails := &user.Details{
-		Username: "test-user",
-		Email:    "test@example.com",
-		UserDN:   "CN=Test User,DC=example,DC=org",
-		Groups:   []string{"TEST_GROUP"},
+		Name:   "test-user",
+		Email:  "test@example.com",
+		DN:     "CN=Test Name,DC=example,DC=org",
+		Groups: []string{"TEST_GROUP"},
 	}
 
 	// Context without tenant
@@ -248,10 +248,10 @@ func TestGenerateJWT_TokenExpiration(t *testing.T) {
 	issuer := createTestTokenIssuer(t)
 
 	userDetails := &user.Details{
-		Username: "test-user",
-		Email:    "test@example.com",
-		UserDN:   "CN=Test User,DC=example,DC=org",
-		Groups:   []string{},
+		Name:   "test-user",
+		Email:  "test@example.com",
+		DN:     "CN=Test Name,DC=example,DC=org",
+		Groups: []string{},
 	}
 
 	ctx := createContextWithUserAndTenant(userDetails, "tenant1")
@@ -290,10 +290,10 @@ func TestGenerateJWT_JTIUniqueness(t *testing.T) {
 	issuer := createTestTokenIssuer(t)
 
 	userDetails := &user.Details{
-		Username: "test-user",
-		Email:    "test@example.com",
-		UserDN:   "CN=Test User,DC=example,DC=org",
-		Groups:   []string{},
+		Name:   "test-user",
+		Email:  "test@example.com",
+		DN:     "CN=Test Name,DC=example,DC=org",
+		Groups: []string{},
 	}
 
 	// Generate multiple tokens and verify JTIs are unique

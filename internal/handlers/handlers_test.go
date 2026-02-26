@@ -146,9 +146,9 @@ func TestWithBasicAuth_ValidCredentials(t *testing.T) {
 		authNFunc: func(username, password string) (*user.Details, error) {
 			if username == "testuser" && password == "testpass" {
 				return &user.Details{
-					Username: "testuser",
-					Email:    "testuser@example.com",
-					UserDN:   "CN=Test User,DC=example,DC=org",
+					Name:  "testuser",
+					Email: "testuser@example.com",
+					DN:    "CN=Test Name,DC=example,DC=org",
 				}, nil
 			}
 			return nil, fmt.Errorf("invalid credentials")
@@ -166,8 +166,8 @@ func TestWithBasicAuth_ValidCredentials(t *testing.T) {
 		}
 
 		userDetails := userValue.(*user.Details)
-		if userDetails.Username != "testuser" {
-			t.Errorf("Expected username 'testuser', got '%s'", userDetails.Username)
+		if userDetails.Name != "testuser" {
+			t.Errorf("Expected username 'testuser', got '%s'", userDetails.Name)
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -264,7 +264,7 @@ func TestWithBasicAuth_InvalidCredentials(t *testing.T) {
 func TestWithAuthorization_FetchesGroups(t *testing.T) {
 	mockAuth := &mockTenantAuthenticator{
 		authZFunc: func(userDetails *user.Details) (*user.Details, error) {
-			if userDetails.UserDN == "CN=Test User,DC=example,DC=org" {
+			if userDetails.DN == "CN=Test Name,DC=example,DC=org" {
 				userDetails.Groups = []string{"ADMIN_GROUP", "DEVELOPER_GROUP"}
 				return userDetails, nil
 			}
@@ -296,9 +296,9 @@ func TestWithAuthorization_FetchesGroups(t *testing.T) {
 	})
 
 	userDetails := &user.Details{
-		Username: "testuser",
-		Email:    "testuser@example.com",
-		UserDN:   "CN=Test User,DC=example,DC=org",
+		Name:  "testuser",
+		Email: "testuser@example.com",
+		DN:    "CN=Test Name,DC=example,DC=org",
 	}
 
 	ctx := context.WithValue(context.Background(), UserContextKey, userDetails)
@@ -333,9 +333,9 @@ func TestWithAuthorization_GroupFetchError(t *testing.T) {
 	})
 
 	userDetails := &user.Details{
-		Username: "testuser",
-		Email:    "testuser@example.com",
-		UserDN:   "CN=Test User,DC=example,DC=org",
+		Name:  "testuser",
+		Email: "testuser@example.com",
+		DN:    "CN=Test Name,DC=example,DC=org",
 	}
 
 	ctx := context.WithValue(context.Background(), UserContextKey, userDetails)
@@ -361,9 +361,9 @@ func TestMiddlewareChain(t *testing.T) {
 	mockAuth := &mockTenantAuthenticator{
 		authNFunc: func(username, password string) (*user.Details, error) {
 			return &user.Details{
-				Username: "chainuser",
-				Email:    "chainuser@example.com",
-				UserDN:   "CN=Chain User,DC=example,DC=org",
+				Name:  "chainuser",
+				Email: "chainuser@example.com",
+				DN:    "CN=Chain Name,DC=example,DC=org",
 			}, nil
 		},
 		authZFunc: func(userDetails *user.Details) (*user.Details, error) {
@@ -388,8 +388,8 @@ func TestMiddlewareChain(t *testing.T) {
 		}
 
 		userDetails := userValue.(*user.Details)
-		if userDetails.Username != "chainuser" {
-			t.Errorf("Expected username 'chainuser', got '%s'", userDetails.Username)
+		if userDetails.Name != "chainuser" {
+			t.Errorf("Expected username 'chainuser', got '%s'", userDetails.Name)
 		}
 
 		if len(userDetails.Groups) != 1 || userDetails.Groups[0] != "CHAIN_GROUP" {

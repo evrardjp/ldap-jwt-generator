@@ -43,9 +43,9 @@ func (m *mockE2EAuth) AuthN(username, password string) (*user.Details, error) {
 }
 
 func (m *mockE2EAuth) AuthZ(userDetails *user.Details) (*user.Details, error) {
-	groups, exists := m.userGroups[userDetails.Username]
+	groups, exists := m.userGroups[userDetails.Name]
 	if !exists {
-		groups = []string{} // User with no groups
+		groups = []string{} // Name with no groups
 	}
 	userDetails.Groups = groups
 	return userDetails, nil
@@ -112,9 +112,9 @@ func createTestServer(t *testing.T) (*httptest.Server, *jwtPkg.TokenIssuer, *moc
 			"admin-user": {
 				password: "admin-pass",
 				details: &user.Details{
-					Username: "admin-user",
-					Email:    "admin@tenant1.local",
-					UserDN:   "CN=Admin User,OU=Users,DC=tenant1,DC=local",
+					Name:  "admin-user",
+					Email: "admin@tenant1.local",
+					DN:    "CN=Admin Name,OU=Users,DC=tenant1,DC=local",
 				},
 			},
 		},
@@ -130,49 +130,49 @@ func createTestServer(t *testing.T) (*httptest.Server, *jwtPkg.TokenIssuer, *moc
 			"customerops-user": {
 				password: "customerops-pass",
 				details: &user.Details{
-					Username: "customerops-user",
-					Email:    "customerops@tenant2.local",
-					UserDN:   "CN=CustomerOps User,OU=Users,DC=tenant2,DC=local",
+					Name:  "customerops-user",
+					Email: "customerops@tenant2.local",
+					DN:    "CN=CustomerOps Name,OU=Users,DC=tenant2,DC=local",
 				},
 			},
 			"appops-user": {
 				password: "appops-pass",
 				details: &user.Details{
-					Username: "appops-user",
-					Email:    "appops@tenant2.local",
-					UserDN:   "CN=AppOps User,OU=Users,DC=tenant2,DC=local",
+					Name:  "appops-user",
+					Email: "appops@tenant2.local",
+					DN:    "CN=AppOps Name,OU=Users,DC=tenant2,DC=local",
 				},
 			},
 			"viewer-user": {
 				password: "viewer-pass",
 				details: &user.Details{
-					Username: "viewer-user",
-					Email:    "viewer@tenant2.local",
-					UserDN:   "CN=Viewer User,OU=Users,DC=tenant2,DC=local",
+					Name:  "viewer-user",
+					Email: "viewer@tenant2.local",
+					DN:    "CN=Viewer Name,OU=Users,DC=tenant2,DC=local",
 				},
 			},
 			"service-user": {
 				password: "service-pass",
 				details: &user.Details{
-					Username: "service-user",
-					Email:    "service@tenant2.local",
-					UserDN:   "CN=Service User,OU=ServiceAccounts,DC=tenant2,DC=local",
+					Name:  "service-user",
+					Email: "service@tenant2.local",
+					DN:    "CN=Service Name,OU=ServiceAccounts,DC=tenant2,DC=local",
 				},
 			},
 			"regular-user": {
 				password: "regular-pass",
 				details: &user.Details{
-					Username: "regular-user",
-					Email:    "regular@tenant2.local",
-					UserDN:   "CN=Regular User,OU=Users,DC=tenant2,DC=local",
+					Name:  "regular-user",
+					Email: "regular@tenant2.local",
+					DN:    "CN=Regular Name,OU=Users,DC=tenant2,DC=local",
 				},
 			},
 			"no-groups-user": {
 				password: "no-groups-pass",
 				details: &user.Details{
-					Username: "no-groups-user",
-					Email:    "nogroups@tenant2.local",
-					UserDN:   "CN=No Groups User,OU=Users,DC=tenant2,DC=local",
+					Name:  "no-groups-user",
+					Email: "nogroups@tenant2.local",
+					DN:    "CN=No Groups Name,OU=Users,DC=tenant2,DC=local",
 				},
 			},
 		},
@@ -483,7 +483,7 @@ func TestE2E_RegularUser(t *testing.T) {
 	}
 }
 
-// Test: User with no groups
+// Test: Name with no groups
 func TestE2E_UserWithNoGroups(t *testing.T) {
 	server, tokenIssuer, _ := createTestServer(t)
 	defer server.Close()

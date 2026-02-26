@@ -36,24 +36,24 @@ func (issuer *TokenIssuer) GenerateJWT(w http.ResponseWriter, r *http.Request) {
 	expiresAt := now.Add(issuer.TokenDuration)
 
 	// Create JWT claims with all required fields and proper security
-	// Incorrect tenantID, Username, Groups must have been caught earlier in middlewares (see also e2e testing).
+	// Incorrect tenantID, Name, Groups must have been caught earlier in middlewares (see also e2e testing).
 	claims := AuthJWTClaims{
 		// Custom claims
-		User:    userDetails.Username,
+		User:    userDetails.Name,
 		Contact: userDetails.Email,
-		UserDN:  userDetails.UserDN,
+		UserDN:  userDetails.DN,
 		Tenant:  tenantID,
 		Groups:  userDetails.Groups,
 
 		// Standard JWT claims for security
 		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    issuer.IssuerFQDN,                      // iss: Application FQDN from env var
-			Subject:   userDetails.Username,                   // sub: User identity
-			Audience:  jwt.ClaimStrings{issuer.IssuerFQDN},    // aud: Intended audience (same as issuer)
-			ExpiresAt: jwt.NewNumericDate(expiresAt),          // exp: Expiration time
-			NotBefore: jwt.NewNumericDate(now),                // nbf: Not valid before (now)
-			IssuedAt:  jwt.NewNumericDate(now),                // iat: Issued at time
-			ID:        generateJTI(userDetails.Username, now), // jti: Unique token ID
+			Issuer:    issuer.IssuerFQDN,                   // iss: Application FQDN from env var
+			Subject:   userDetails.Name,                    // sub: Name identity
+			Audience:  jwt.ClaimStrings{issuer.IssuerFQDN}, // aud: Intended audience (same as issuer)
+			ExpiresAt: jwt.NewNumericDate(expiresAt),       // exp: Expiration time
+			NotBefore: jwt.NewNumericDate(now),             // nbf: Not valid before (now)
+			IssuedAt:  jwt.NewNumericDate(now),             // iat: Issued at time
+			ID:        generateJTI(userDetails.Name, now),  // jti: Unique token ID
 		},
 	}
 
@@ -62,7 +62,7 @@ func (issuer *TokenIssuer) GenerateJWT(w http.ResponseWriter, r *http.Request) {
 	signedToken, err := token.SignedString(issuer.PrivateKey)
 	if err != nil {
 		TokenCounter.WithLabelValues("token_error").Inc()
-		slog.Error("failed to sign token", "user", userDetails.Username, "error", err)
+		slog.Error("failed to sign token", "user", userDetails.Name, "error", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -72,7 +72,7 @@ func (issuer *TokenIssuer) GenerateJWT(w http.ResponseWriter, r *http.Request) {
 	KubiTokenSizeHistogram.Observe(float64(len(signedToken)))
 
 	slog.Debug("token generated",
-		"user", userDetails.Username,
+		"user", userDetails.Name,
 		"tenant", tenantID,
 		"groupCount", len(userDetails.Groups),
 		"expiresAt", expiresAt)

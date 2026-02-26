@@ -51,9 +51,9 @@ func (c *LDAPClient) SearchUsers(baseDN, filter, username string) (*user.Details
 
 	entry := res.Entries[0]
 	return &user.Details{
-		Username: username,
-		UserDN:   entry.DN,
-		Email:    entry.GetAttributeValue("mail"),
+		Name:  username,
+		DN:    entry.DN,
+		Email: entry.GetAttributeValue("mail"),
 	}, nil
 }
 

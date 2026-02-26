@@ -24,10 +24,10 @@ type TokenIssuer struct {
 // AuthJWTClaims represents the JWT token claims
 type AuthJWTClaims struct {
 	// Custom claims
-	User    string   `json:"username"`
-	Contact string   `json:"email"`
+	User    string   `json:"user"`
+	Contact string   `json:"contact"`
 	UserDN  string   `json:"userDN"`
-	Tenant  string   `json:"tenantId"`
+	Tenant  string   `json:"tenant"`
 	Groups  []string `json:"groups"`
 
 	// Standard JWT claims (iss, aud, exp, nbf, iat, sub, jti)

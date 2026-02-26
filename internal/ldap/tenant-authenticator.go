@@ -25,7 +25,7 @@ func (ta *TenantAuthenticator) AuthN(username, password string) (*user.Details, 
 	}
 
 	// Step 2: Validate password by binding as user
-	if err := ta.ldapClient.ValidateUserPassword(userDetails.UserDN, password); err != nil {
+	if err := ta.ldapClient.ValidateUserPassword(userDetails.DN, password); err != nil {
 		return nil, fmt.Errorf("invalid password: %w", err)
 	}
 
@@ -38,7 +38,7 @@ func (ta *TenantAuthenticator) AuthZ(userDetails *user.Details) (*user.Details, 
 		return nil, fmt.Errorf("user details cannot be nil")
 	}
 
-	groups, err := ta.GetUserGroups(userDetails.UserDN)
+	groups, err := ta.GetUserGroups(userDetails.DN)
 	if err != nil {
 		return nil, err
 	}

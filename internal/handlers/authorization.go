@@ -31,7 +31,7 @@ func WithGroupEnrichment(next http.HandlerFunc) http.HandlerFunc {
 		// Fetch user groups using tenant-specific configuration
 		enrichedUser, err := authenticator.AuthZ(userDetails)
 		if err != nil {
-			slog.Error("failed to fetch user groups", "user", userDetails.Username, "error", err)
+			slog.Error("failed to fetch user groups", "user", userDetails.Name, "error", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
@@ -39,9 +39,9 @@ func WithGroupEnrichment(next http.HandlerFunc) http.HandlerFunc {
 		// Verify user belongs to at least one group (authorization requirement)
 		if len(enrichedUser.Groups) == 0 {
 			slog.Warn("user has no groups, denying access",
-				"user", enrichedUser.Username,
-				"userDN", enrichedUser.UserDN)
-			http.Error(w, "Forbidden: User must belong to at least one group", http.StatusForbidden)
+				"user", enrichedUser.Name,
+				"userDN", enrichedUser.DN)
+			http.Error(w, "Forbidden: Name must belong to at least one group", http.StatusForbidden)
 			return
 		}
 
