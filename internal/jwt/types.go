@@ -35,6 +35,11 @@ type AuthJWTClaims struct {
 }
 
 func NewTokenIssuer() (*TokenIssuer, error) {
+	return newTokenIssuer(PrivateKeyLocation, PublicKeyLocation)
+}
+
+// newTokenIssuer creates a TokenIssuer with configurable key paths (for testing)
+func newTokenIssuer(privateKeyPath, publicKeyPath string) (*TokenIssuer, error) {
 	defaultDuration := os.Getenv("TOKEN_LIFETIME")
 	if defaultDuration == "" {
 		defaultDuration = "4h"
@@ -51,19 +56,19 @@ func NewTokenIssuer() (*TokenIssuer, error) {
 		return nil, fmt.Errorf("unable to parse duration %s", defaultDuration)
 	}
 
-	if _, errStat := os.Stat(PrivateKeyLocation); os.IsNotExist(errStat) {
+	if _, errStat := os.Stat(privateKeyPath); os.IsNotExist(errStat) {
 		return nil, errStat
 	}
 
-	if _, errStat := os.Stat(PublicKeyLocation); os.IsNotExist(errStat) {
+	if _, errStat := os.Stat(publicKeyPath); os.IsNotExist(errStat) {
 		return nil, errStat
 	}
 
-	privatePEM, errPrivateKey := os.ReadFile(PrivateKeyLocation)
+	privatePEM, errPrivateKey := os.ReadFile(privateKeyPath)
 	if errPrivateKey != nil {
 		return nil, fmt.Errorf("unable to read ECDSA private key %w", errPrivateKey)
 	}
-	publicPEM, errPublicKey := os.ReadFile(PublicKeyLocation)
+	publicPEM, errPublicKey := os.ReadFile(publicKeyPath)
 	if errPublicKey != nil {
 		return nil, fmt.Errorf("unable to read ECDSA public key %w", errPublicKey)
 	}

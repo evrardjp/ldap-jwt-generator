@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"slices"
 	"testing"
 	"time"
 
@@ -102,7 +103,7 @@ func TestE2E_RealLDAP_ValidUser(t *testing.T) {
 
 			// Verify groups
 			for _, expectedGroup := range tc.expectedGroups {
-				if !containsString(claims.Groups, expectedGroup) {
+				if !slices.Contains(claims.Groups, expectedGroup) {
 					t.Errorf("Expected groups to contain '%s', got %v", expectedGroup, claims.Groups)
 				}
 			}
@@ -332,16 +333,6 @@ func TestE2E_RealLDAP_MetricsEndpoint(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status %d, got %d", http.StatusOK, resp.StatusCode)
 	}
-}
-
-// Helper functions
-func containsString(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
 }
 
 func contains(s, substr string) bool {

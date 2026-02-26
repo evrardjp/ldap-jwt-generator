@@ -327,6 +327,191 @@ func TestGenerateJWT_JTIUniqueness(t *testing.T) {
 	}
 }
 
+func TestGenerateJWT_MultipleGroupsPreservation(t *testing.T) {
+	issuer := createTestTokenIssuer(t)
+
+	// Create user with 6 groups to verify no truncation
+	userDetails := &user.Details{
+		Name:  "multi-group-user",
+		Email: "user@example.com",
+		DN:    "CN=Multi Group User,OU=Users,DC=example,DC=org",
+		Groups: []string{
+			"GROUP_1",
+			"GROUP_2",
+			"GROUP_3",
+			"GROUP_4",
+			"GROUP_5",
+			"GROUP_6",
+		},
+	}
+
+	ctx := createContextWithUserAndTenant(userDetails, "tenant1")
+	req := httptest.NewRequest("GET", "/token", nil).WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	issuer.GenerateJWT(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Errorf("Expected status %d, got %d", http.StatusCreated, w.Code)
+	}
+
+	tokenString := w.Body.String()
+	token, err := jwt.ParseWithClaims(tokenString, &AuthJWTClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return issuer.PublicKey, nil
+	})
+	if err != nil {
+		t.Fatalf("Failed to parse token: %v", err)
+	}
+
+	claims := token.Claims.(*AuthJWTClaims)
+
+	// Verify all 6 groups are present
+	if len(claims.Groups) != 6 {
+		t.Errorf("Expected 6 groups, got %d", len(claims.Groups))
+	}
+
+	// Verify each group is present (order preserved)
+	for i, expectedGroup := range userDetails.Groups {
+		if i >= len(claims.Groups) {
+			t.Errorf("Expected group '%s' at index %d, but groups slice is too short", expectedGroup, i)
+			continue
+		}
+		if claims.Groups[i] != expectedGroup {
+			t.Errorf("Expected group '%s' at index %d, got '%s'", expectedGroup, i, claims.Groups[i])
+		}
+	}
+}
+
+func TestGenerateJWT_TenantIsolation(t *testing.T) {
+	issuer := createTestTokenIssuer(t)
+
+	// Same user for both requests
+	userDetails := &user.Details{
+		Name:   "shared-user",
+		Email:  "user@example.com",
+		DN:     "CN=Shared User,OU=Users,DC=example,DC=org",
+		Groups: []string{"SHARED_GROUP"},
+	}
+
+	// Generate token for tenant1
+	ctx1 := createContextWithUserAndTenant(userDetails, "tenant1")
+	req1 := httptest.NewRequest("GET", "/token", nil).WithContext(ctx1)
+	w1 := httptest.NewRecorder()
+	issuer.GenerateJWT(w1, req1)
+
+	// Generate token for tenant2
+	ctx2 := createContextWithUserAndTenant(userDetails, "tenant2")
+	req2 := httptest.NewRequest("GET", "/token", nil).WithContext(ctx2)
+	w2 := httptest.NewRecorder()
+	issuer.GenerateJWT(w2, req2)
+
+	// Parse both tokens
+	token1, _ := jwt.ParseWithClaims(w1.Body.String(), &AuthJWTClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return issuer.PublicKey, nil
+	})
+	token2, _ := jwt.ParseWithClaims(w2.Body.String(), &AuthJWTClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return issuer.PublicKey, nil
+	})
+
+	claims1 := token1.Claims.(*AuthJWTClaims)
+	claims2 := token2.Claims.(*AuthJWTClaims)
+
+	// Verify tenant claims are different
+	if claims1.Tenant != "tenant1" {
+		t.Errorf("Expected tenant1, got '%s'", claims1.Tenant)
+	}
+	if claims2.Tenant != "tenant2" {
+		t.Errorf("Expected tenant2, got '%s'", claims2.Tenant)
+	}
+
+	// Verify the tokens themselves are different (different tenant = different token)
+	if w1.Body.String() == w2.Body.String() {
+		t.Error("Expected different tokens for different tenants, but they are identical")
+	}
+
+	// Verify same user claims in both
+	if claims1.User != claims2.User {
+		t.Error("Expected same user in both tokens")
+	}
+	if claims1.Contact != claims2.Contact {
+		t.Error("Expected same email in both tokens")
+	}
+}
+
+func TestGenerateJWT_AllClaimFieldsPopulated(t *testing.T) {
+	issuer := createTestTokenIssuer(t)
+
+	userDetails := &user.Details{
+		Name:   "complete-user",
+		Email:  "complete@example.com",
+		DN:     "CN=Complete User,OU=Users,DC=example,DC=org",
+		Groups: []string{"GROUP_A", "GROUP_B"},
+	}
+
+	ctx := createContextWithUserAndTenant(userDetails, "production")
+	req := httptest.NewRequest("GET", "/token", nil).WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	issuer.GenerateJWT(w, req)
+
+	tokenString := w.Body.String()
+	token, _ := jwt.ParseWithClaims(tokenString, &AuthJWTClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return issuer.PublicKey, nil
+	})
+	claims := token.Claims.(*AuthJWTClaims)
+
+	// Verify ALL custom claims are populated
+	if claims.User == "" {
+		t.Error("User claim is empty")
+	}
+	if claims.Contact == "" {
+		t.Error("Contact (email) claim is empty")
+	}
+	if claims.UserDN == "" {
+		t.Error("UserDN claim is empty")
+	}
+	if claims.Tenant == "" {
+		t.Error("Tenant claim is empty")
+	}
+	if len(claims.Groups) == 0 {
+		t.Error("Groups claim is empty")
+	}
+
+	// Verify ALL standard JWT claims are populated
+	if claims.Issuer == "" {
+		t.Error("Issuer (iss) claim is empty")
+	}
+	if claims.Subject == "" {
+		t.Error("Subject (sub) claim is empty")
+	}
+	if len(claims.Audience) == 0 {
+		t.Error("Audience (aud) claim is empty")
+	}
+	if claims.ExpiresAt == nil {
+		t.Error("ExpiresAt (exp) claim is nil")
+	}
+	if claims.NotBefore == nil {
+		t.Error("NotBefore (nbf) claim is nil")
+	}
+	if claims.IssuedAt == nil {
+		t.Error("IssuedAt (iat) claim is nil")
+	}
+	if claims.ID == "" {
+		t.Error("ID (jti) claim is empty")
+	}
+
+	// Verify specific values match input
+	if claims.User != "complete-user" {
+		t.Errorf("Expected user 'complete-user', got '%s'", claims.User)
+	}
+	if claims.Contact != "complete@example.com" {
+		t.Errorf("Expected email 'complete@example.com', got '%s'", claims.Contact)
+	}
+	if claims.Tenant != "production" {
+		t.Errorf("Expected tenant 'production', got '%s'", claims.Tenant)
+	}
+}
+
 // This need extending with:
 // Tests for gibberish tokens
 // Tests for invalid chars in token
@@ -341,20 +526,28 @@ func Test_generateJTI(t *testing.T) {
 		want string
 	}{
 		{
-			name: "empty",
+			name: "empty username with Unix epoch",
 			args: args{
 				username: "",
-				issuedAt: time.Time{},
+				issuedAt: time.Unix(0, 0),
 			},
 			want: "-0",
 		},
 		{
-			name: "username only",
+			name: "username with Unix epoch",
 			args: args{
 				username: "username",
-				issuedAt: time.Time{},
+				issuedAt: time.Unix(0, 0),
 			},
 			want: "username-0",
+		},
+		{
+			name: "username with specific timestamp",
+			args: args{
+				username: "testuser",
+				issuedAt: time.Unix(1234567890, 0),
+			},
+			want: "testuser-1234567890",
 		},
 	}
 	for _, tt := range tests {
