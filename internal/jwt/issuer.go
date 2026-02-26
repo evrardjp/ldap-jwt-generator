@@ -36,6 +36,7 @@ func (issuer *TokenIssuer) GenerateJWT(w http.ResponseWriter, r *http.Request) {
 	expiresAt := now.Add(issuer.TokenDuration)
 
 	// Create JWT claims with all required fields and proper security
+	// Incorrect tenantID, Username, Groups must have been caught earlier in middlewares (see also e2e testing).
 	claims := AuthJWTClaims{
 		// Custom claims
 		User:    userDetails.Username,

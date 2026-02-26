@@ -24,7 +24,7 @@ func WithBasicAuth(next http.HandlerFunc) http.HandlerFunc {
 		// will be false.
 		username, password, ok := r.BasicAuth()
 		if ok {
-			if len(password) == 0 {
+			if len(username) == 0 || len(password) == 0 {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}

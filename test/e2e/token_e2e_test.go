@@ -71,7 +71,7 @@ func TestE2E_RealLDAP_ValidUser(t *testing.T) {
 			tokenString := string(tokenBytes)
 
 			// Parse token (we need to load the public key)
-			publicKeyPEM, err := os.ReadFile("../../fixtures/signing-keys/ecdsa-public-key.pem")
+			publicKeyPEM, err := os.ReadFile("../fixtures/signing-keys/ecdsa-public-key.pem")
 			if err != nil {
 				t.Fatalf("Failed to read public key: %v", err)
 			}
@@ -129,6 +129,29 @@ func TestE2E_RealLDAP_WrongPassword(t *testing.T) {
 	req, _ := http.NewRequest("GET", apiBaseURL+"/token", nil)
 	req.Header.Set("Tenant-Id", tenantID)
 	auth := base64.StdEncoding.EncodeToString([]byte("admin-kube1:wrongpassword"))
+	req.Header.Set("Authorization", "Basic "+auth)
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("Request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("Expected status %d, got %d", http.StatusUnauthorized, resp.StatusCode)
+	}
+}
+
+// TestE2E_RealLDAP_EmptyUser tests authentication failure with non-existent user
+func TestE2E_RealLDAP_EmptyUser(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping e2e test in short mode")
+	}
+
+	req, _ := http.NewRequest("GET", apiBaseURL+"/token", nil)
+	req.Header.Set("Tenant-Id", tenantID)
+	auth := base64.StdEncoding.EncodeToString([]byte(":somepass"))
 	req.Header.Set("Authorization", "Basic "+auth)
 
 	client := &http.Client{Timeout: 10 * time.Second}
@@ -221,14 +244,36 @@ func TestE2E_RealLDAP_MissingTenantHeader(t *testing.T) {
 	}
 }
 
-// TestE2E_RealLDAP_InvalidTenant tests invalid tenant ID
+// TestE2E_RealLDAP_UnknownTenant tests invalid tenant ID
+func TestE2E_RealLDAP_UnknownTenant(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping e2e test in short mode")
+	}
+
+	req, _ := http.NewRequest("GET", apiBaseURL+"/token", nil)
+	req.Header.Set("Tenant-Id", "unknown-tenant")
+	auth := base64.StdEncoding.EncodeToString([]byte("admin-kube1:somepass"))
+	req.Header.Set("Authorization", "Basic "+auth)
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("Request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected status %d, got %d", http.StatusBadRequest, resp.StatusCode)
+	}
+}
+
 func TestE2E_RealLDAP_InvalidTenant(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping e2e test in short mode")
 	}
 
 	req, _ := http.NewRequest("GET", apiBaseURL+"/token", nil)
-	req.Header.Set("Tenant-Id", "invalid-tenant")
+	req.Header.Set("Tenant-Id", "\\invalid-tenant")
 	auth := base64.StdEncoding.EncodeToString([]byte("admin-kube1:somepass"))
 	req.Header.Set("Authorization", "Basic "+auth)
 

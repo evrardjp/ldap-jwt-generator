@@ -59,7 +59,6 @@ docker run -d \
   -e TOKEN_LIFETIME="4h" \
   -e INSECURE_LDAP="true" \
   -v $(pwd)/test/fixtures/tenant-configs:/etc/ldap-jwt-generator/ldap-configs:ro \
-  #careful, name of file matters here, ensure fixtures are correct \
   -v $(pwd)/test/fixtures/signing-keys:/etc/ldap-jwt-generator/signing-keys:ro \
   ldap-jwt-generator:latest
 """

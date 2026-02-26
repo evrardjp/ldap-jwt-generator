@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"ldap-jwt-generator/internal/handlers"
 	jwtPkg "ldap-jwt-generator/internal/jwt"
 	ldapPkg "ldap-jwt-generator/internal/ldap"
 	"ldap-jwt-generator/internal/user"
@@ -69,12 +71,12 @@ func createTestServer(t *testing.T) (*httptest.Server, *jwtPkg.TokenIssuer, *moc
 	t.Helper()
 
 	// Load test keys
-	privateKeyPEM, err := os.ReadFile("../../test/fixtures/signing-keys/ecdsa-private-key.pem")
+	privateKeyPEM, err := os.ReadFile("../fixtures/signing-keys/ecdsa-private-key.pem")
 	if err != nil {
 		t.Fatalf("Failed to read test private key: %v", err)
 	}
 
-	publicKeyPEM, err := os.ReadFile("../../fixtures/signing-keys/ecdsa-public-key.pem")
+	publicKeyPEM, err := os.ReadFile("../fixtures/signing-keys/ecdsa-public-key.pem")
 	if err != nil {
 		t.Fatalf("Failed to read test public key: %v", err)
 	}
@@ -225,6 +227,8 @@ func createTestServer(t *testing.T) (*httptest.Server, *jwtPkg.TokenIssuer, *moc
 
 		// Set context for token generation
 		ctx := r.Context()
+		ctx = context.WithValue(ctx, handlers.UserContextKey, userDetails)
+		ctx = context.WithValue(ctx, handlers.TenantIDKey, tenantID)
 		r = r.WithContext(ctx)
 
 		// Generate JWT
@@ -278,13 +282,13 @@ func TestE2E_AdminUser(t *testing.T) {
 
 	claims := token.Claims.(*jwtPkg.AuthJWTClaims)
 
-	if claims.Username != "admin-user" {
-		t.Errorf("Expected username 'admin-user', got '%s'", claims.Username)
+	if claims.User != "admin-user" {
+		t.Errorf("Expected username 'admin-user', got '%s'", claims.User)
 	}
-	if claims.TenantID != "tenant1" {
-		t.Errorf("Expected tenantID 'tenant1', got '%s'", claims.TenantID)
+	if claims.Tenant != "tenant1" {
+		t.Errorf("Expected tenantID 'tenant1', got '%s'", claims.Tenant)
 	}
-	if !contains(claims.Groups, "ADMIN_KUBERNETES") {
+	if !containsInSlice(claims.Groups, "ADMIN_KUBERNETES") {
 		t.Error("Expected groups to contain 'ADMIN_KUBERNETES'")
 	}
 	if claims.Issuer != "ldap-jwt-generator.test.local" {
@@ -322,13 +326,13 @@ func TestE2E_CustomerOpsUser(t *testing.T) {
 
 	claims := token.Claims.(*jwtPkg.AuthJWTClaims)
 
-	if claims.Username != "customerops-user" {
-		t.Errorf("Expected username 'customerops-user', got '%s'", claims.Username)
+	if claims.User != "customerops-user" {
+		t.Errorf("Expected username 'customerops-user', got '%s'", claims.User)
 	}
-	if !contains(claims.Groups, "CUSTOMER_OPS") {
+	if !containsInSlice(claims.Groups, "CUSTOMER_OPS") {
 		t.Error("Expected groups to contain 'CUSTOMER_OPS'")
 	}
-	if !contains(claims.Groups, "PROJECT_ALPHA") {
+	if !containsInSlice(claims.Groups, "PROJECT_ALPHA") {
 		t.Error("Expected groups to contain 'PROJECT_ALPHA'")
 	}
 }
@@ -363,10 +367,10 @@ func TestE2E_AppOpsUser(t *testing.T) {
 
 	claims := token.Claims.(*jwtPkg.AuthJWTClaims)
 
-	if !contains(claims.Groups, "APPLICATION_OPS") {
+	if !containsInSlice(claims.Groups, "APPLICATION_OPS") {
 		t.Error("Expected groups to contain 'APPLICATION_OPS'")
 	}
-	if !contains(claims.Groups, "DEVELOPERS") {
+	if !containsInSlice(claims.Groups, "DEVELOPERS") {
 		t.Error("Expected groups to contain 'DEVELOPERS'")
 	}
 }
@@ -401,7 +405,7 @@ func TestE2E_ViewerUser(t *testing.T) {
 
 	claims := token.Claims.(*jwtPkg.AuthJWTClaims)
 
-	if !contains(claims.Groups, "CLUSTER_VIEWER") {
+	if !containsInSlice(claims.Groups, "CLUSTER_VIEWER") {
 		t.Error("Expected groups to contain 'CLUSTER_VIEWER'")
 	}
 }
@@ -436,7 +440,7 @@ func TestE2E_ServiceAccountUser(t *testing.T) {
 
 	claims := token.Claims.(*jwtPkg.AuthJWTClaims)
 
-	if !contains(claims.Groups, "SERVICE_ACCOUNTS") {
+	if !containsInSlice(claims.Groups, "SERVICE_ACCOUNTS") {
 		t.Error("Expected groups to contain 'SERVICE_ACCOUNTS'")
 	}
 }
@@ -474,7 +478,7 @@ func TestE2E_RegularUser(t *testing.T) {
 	if len(claims.Groups) != 2 {
 		t.Errorf("Expected 2 groups, got %d", len(claims.Groups))
 	}
-	if !contains(claims.Groups, "PROJECT_BETA") || !contains(claims.Groups, "PROJECT_GAMMA") {
+	if !containsInSlice(claims.Groups, "PROJECT_BETA") || !containsInSlice(claims.Groups, "PROJECT_GAMMA") {
 		t.Error("Expected groups to contain PROJECT_BETA and PROJECT_GAMMA")
 	}
 }
@@ -623,7 +627,7 @@ func TestE2E_MetricsEndpoint(t *testing.T) {
 }
 
 // Helper function
-func contains(slice []string, item string) bool {
+func containsInSlice(slice []string, item string) bool {
 	for _, s := range slice {
 		if s == item {
 			return true

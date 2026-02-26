@@ -5,13 +5,19 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"ldap-jwt-generator/internal/handlers"
 	"ldap-jwt-generator/internal/user"
+
+	"github.com/golang-jwt/jwt/v5"
+)
+
+const (
+	testFQDN = "ldap-jwt-generator.example.com"
 )
 
 // Test helper to create a TokenIssuer with test keys
@@ -45,7 +51,7 @@ func createTestTokenIssuer(t *testing.T) *TokenIssuer {
 		PrivateKey:    privateKey,
 		PublicKey:     publicKey,
 		TokenDuration: duration,
-		IssuerFQDN:    "ldap-jwt-generator.example.com",
+		IssuerFQDN:    testFQDN,
 	}
 }
 
@@ -57,7 +63,7 @@ func createContextWithUserAndTenant(userDetails *user.Details, tenantID string) 
 	return ctx
 }
 
-func TestGenerateJWT_AdminUser(t *testing.T) {
+func TestGenerateJWT_User(t *testing.T) {
 	issuer := createTestTokenIssuer(t)
 
 	// Create admin user (member of admin group)
@@ -106,22 +112,22 @@ func TestGenerateJWT_AdminUser(t *testing.T) {
 	}
 
 	// Verify custom claims
-	if claims.Username != "admin-user" {
-		t.Errorf("Expected username 'admin-user', got '%s'", claims.Username)
+	if claims.User != "admin-user" {
+		t.Errorf("Expected username 'admin-user', got '%s'", claims.User)
 	}
-	if claims.Email != "admin@example.com" {
-		t.Errorf("Expected email 'admin@example.com', got '%s'", claims.Email)
+	if claims.Contact != "admin@example.com" {
+		t.Errorf("Expected email 'admin@example.com', got '%s'", claims.Contact)
 	}
 	if claims.UserDN != "CN=Admin User,OU=Users,DC=example,DC=org" {
 		t.Errorf("Expected userDN 'CN=Admin User,OU=Users,DC=example,DC=org', got '%s'", claims.UserDN)
 	}
-	if claims.TenantID != "tenant1" {
-		t.Errorf("Expected tenantID 'tenant1', got '%s'", claims.TenantID)
+	if claims.Tenant != "tenant1" {
+		t.Errorf("Expected tenantID 'tenant1', got '%s'", claims.Tenant)
 	}
 	if len(claims.Groups) != 2 {
 		t.Errorf("Expected 2 groups, got %d", len(claims.Groups))
 	}
-	if !contains(claims.Groups, "ADMIN_KUBERNETES") {
+	if !slices.Contains(claims.Groups, "ADMIN_KUBERNETES") {
 		t.Error("Expected groups to contain 'ADMIN_KUBERNETES'")
 	}
 
@@ -132,7 +138,7 @@ func TestGenerateJWT_AdminUser(t *testing.T) {
 	if claims.Subject != "admin-user" {
 		t.Errorf("Expected subject 'admin-user', got '%s'", claims.Subject)
 	}
-	if len(claims.Audience) != 1 || claims.Audience[0] != "ldap-jwt-generator.example.com" {
+	if len(claims.Audience) != 1 || claims.Audience[0] != testFQDN {
 		t.Errorf("Expected audience ['ldap-jwt-generator.example.com'], got %v", claims.Audience)
 	}
 	if claims.ExpiresAt == nil || claims.ExpiresAt.Time.Before(time.Now()) {
@@ -152,61 +158,12 @@ func TestGenerateJWT_AdminUser(t *testing.T) {
 	}
 }
 
-func TestGenerateJWT_CustomerOpsUser(t *testing.T) {
+// TestGenerateJWT_EmptyUser is a test to ensure that the system can write proper token even without user.
+// It's a "technically correct" test. Yet, we should never arrive to this case in real life.
+func TestGenerateJWT_EmptyUser(t *testing.T) {
 	issuer := createTestTokenIssuer(t)
 
-	// Create customer ops user (member of customer ops group)
-	userDetails := &user.Details{
-		Username: "customerops-user",
-		Email:    "customerops@example.com",
-		UserDN:   "CN=Customer Ops User,OU=Users,DC=example,DC=org",
-		Groups:   []string{"CUSTOMER_OPS", "PROJECT_TEAM_A"},
-	}
-
-	ctx := createContextWithUserAndTenant(userDetails, "tenant2")
-	req := httptest.NewRequest("GET", "/token", nil).WithContext(ctx)
-	w := httptest.NewRecorder()
-
-	issuer.GenerateJWT(w, req)
-
-	if w.Code != http.StatusCreated {
-		t.Errorf("Expected status %d, got %d", http.StatusCreated, w.Code)
-	}
-
-	tokenString := w.Body.String()
-	token, err := jwt.ParseWithClaims(tokenString, &AuthJWTClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return issuer.PublicKey, nil
-	})
-
-	if err != nil {
-		t.Fatalf("Failed to parse token: %v", err)
-	}
-
-	claims := token.Claims.(*AuthJWTClaims)
-
-	if claims.Username != "customerops-user" {
-		t.Errorf("Expected username 'customerops-user', got '%s'", claims.Username)
-	}
-	if claims.TenantID != "tenant2" {
-		t.Errorf("Expected tenantID 'tenant2', got '%s'", claims.TenantID)
-	}
-	if !contains(claims.Groups, "CUSTOMER_OPS") {
-		t.Error("Expected groups to contain 'CUSTOMER_OPS'")
-	}
-	if !contains(claims.Groups, "PROJECT_TEAM_A") {
-		t.Error("Expected groups to contain 'PROJECT_TEAM_A'")
-	}
-}
-
-func TestGenerateJWT_AppOpsUser(t *testing.T) {
-	issuer := createTestTokenIssuer(t)
-
-	userDetails := &user.Details{
-		Username: "appops-user",
-		Email:    "appops@example.com",
-		UserDN:   "CN=App Ops User,OU=Users,DC=example,DC=org",
-		Groups:   []string{"APPLICATION_OPS", "DEVELOPERS"},
-	}
+	userDetails := &user.Details{}
 
 	ctx := createContextWithUserAndTenant(userDetails, "tenant1")
 	req := httptest.NewRequest("GET", "/token", nil).WithContext(ctx)
@@ -214,6 +171,7 @@ func TestGenerateJWT_AppOpsUser(t *testing.T) {
 
 	issuer.GenerateJWT(w, req)
 
+	// Should still succeed and generate token with empty token
 	if w.Code != http.StatusCreated {
 		t.Errorf("Expected status %d, got %d", http.StatusCreated, w.Code)
 	}
@@ -224,136 +182,28 @@ func TestGenerateJWT_AppOpsUser(t *testing.T) {
 	})
 
 	claims := token.Claims.(*AuthJWTClaims)
-	if !contains(claims.Groups, "APPLICATION_OPS") {
-		t.Error("Expected groups to contain 'APPLICATION_OPS'")
-	}
-}
-
-func TestGenerateJWT_ViewerUser(t *testing.T) {
-	issuer := createTestTokenIssuer(t)
-
-	userDetails := &user.Details{
-		Username: "viewer-user",
-		Email:    "viewer@example.com",
-		UserDN:   "CN=Viewer User,OU=Users,DC=example,DC=org",
-		Groups:   []string{"CLUSTER_VIEWER"},
+	// Verify standard JWT claims
+	if claims.Issuer != testFQDN {
+		t.Errorf("Expected issuer %s, got '%s'", testFQDN, claims.Issuer)
 	}
 
-	ctx := createContextWithUserAndTenant(userDetails, "tenant1")
-	req := httptest.NewRequest("GET", "/token", nil).WithContext(ctx)
-	w := httptest.NewRecorder()
-
-	issuer.GenerateJWT(w, req)
-
-	if w.Code != http.StatusCreated {
-		t.Errorf("Expected status %d, got %d", http.StatusCreated, w.Code)
+	if len(claims.Audience) != 1 || claims.Audience[0] != testFQDN {
+		t.Errorf("Expected audience ['ldap-jwt-generator.example.com'], got %v", claims.Audience)
 	}
-
-	tokenString := w.Body.String()
-	token, _ := jwt.ParseWithClaims(tokenString, &AuthJWTClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return issuer.PublicKey, nil
-	})
-
-	claims := token.Claims.(*AuthJWTClaims)
-	if !contains(claims.Groups, "CLUSTER_VIEWER") {
-		t.Error("Expected groups to contain 'CLUSTER_VIEWER'")
+	if claims.ExpiresAt == nil || claims.ExpiresAt.Time.Before(time.Now()) {
+		t.Error("Token should have valid expiration in the future")
 	}
-}
-
-func TestGenerateJWT_ServiceAccountUser(t *testing.T) {
-	issuer := createTestTokenIssuer(t)
-
-	userDetails := &user.Details{
-		Username: "service-account",
-		Email:    "service@example.com",
-		UserDN:   "CN=Service Account,OU=ServiceAccounts,DC=example,DC=org",
-		Groups:   []string{"SERVICE_ACCOUNTS", "AUTOMATED_PROCESSES"},
+	if claims.NotBefore == nil || claims.NotBefore.Time.After(time.Now().Add(time.Minute)) {
+		t.Error("Token nbf should be now or in the past")
 	}
-
-	ctx := createContextWithUserAndTenant(userDetails, "tenant1")
-	req := httptest.NewRequest("GET", "/token", nil).WithContext(ctx)
-	w := httptest.NewRecorder()
-
-	issuer.GenerateJWT(w, req)
-
-	if w.Code != http.StatusCreated {
-		t.Errorf("Expected status %d, got %d", http.StatusCreated, w.Code)
+	if claims.IssuedAt == nil || claims.IssuedAt.Time.After(time.Now().Add(time.Minute)) {
+		t.Error("Token iat should be now or in the past")
 	}
-
-	tokenString := w.Body.String()
-	token, _ := jwt.ParseWithClaims(tokenString, &AuthJWTClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return issuer.PublicKey, nil
-	})
-
-	claims := token.Claims.(*AuthJWTClaims)
-	if !contains(claims.Groups, "SERVICE_ACCOUNTS") {
-		t.Error("Expected groups to contain 'SERVICE_ACCOUNTS'")
+	if claims.ID == "" {
+		t.Error("Token should have a JTI (JWT ID)")
 	}
-	if !contains(claims.Groups, "AUTOMATED_PROCESSES") {
-		t.Error("Expected groups to contain 'AUTOMATED_PROCESSES'")
-	}
-}
-
-func TestGenerateJWT_RegularUser(t *testing.T) {
-	issuer := createTestTokenIssuer(t)
-
-	userDetails := &user.Details{
-		Username: "regular-user",
-		Email:    "regular@example.com",
-		UserDN:   "CN=Regular User,OU=Users,DC=example,DC=org",
-		Groups:   []string{"PROJECT_ALPHA", "PROJECT_BETA"},
-	}
-
-	ctx := createContextWithUserAndTenant(userDetails, "tenant1")
-	req := httptest.NewRequest("GET", "/token", nil).WithContext(ctx)
-	w := httptest.NewRecorder()
-
-	issuer.GenerateJWT(w, req)
-
-	if w.Code != http.StatusCreated {
-		t.Errorf("Expected status %d, got %d", http.StatusCreated, w.Code)
-	}
-
-	tokenString := w.Body.String()
-	token, _ := jwt.ParseWithClaims(tokenString, &AuthJWTClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return issuer.PublicKey, nil
-	})
-
-	claims := token.Claims.(*AuthJWTClaims)
-	if len(claims.Groups) != 2 {
-		t.Errorf("Expected 2 groups, got %d", len(claims.Groups))
-	}
-}
-
-func TestGenerateJWT_UserWithNoGroups(t *testing.T) {
-	issuer := createTestTokenIssuer(t)
-
-	userDetails := &user.Details{
-		Username: "no-groups-user",
-		Email:    "nogroups@example.com",
-		UserDN:   "CN=No Groups User,OU=Users,DC=example,DC=org",
-		Groups:   []string{},
-	}
-
-	ctx := createContextWithUserAndTenant(userDetails, "tenant1")
-	req := httptest.NewRequest("GET", "/token", nil).WithContext(ctx)
-	w := httptest.NewRecorder()
-
-	issuer.GenerateJWT(w, req)
-
-	// Should still succeed and generate token with empty groups
-	if w.Code != http.StatusCreated {
-		t.Errorf("Expected status %d, got %d", http.StatusCreated, w.Code)
-	}
-
-	tokenString := w.Body.String()
-	token, _ := jwt.ParseWithClaims(tokenString, &AuthJWTClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return issuer.PublicKey, nil
-	})
-
-	claims := token.Claims.(*AuthJWTClaims)
-	if len(claims.Groups) != 0 {
-		t.Errorf("Expected 0 groups, got %d", len(claims.Groups))
+	if !strings.HasPrefix(claims.ID, "-") {
+		t.Errorf("Expected JTI to start with '-' for empty username, got '%s'", claims.ID)
 	}
 }
 
@@ -477,12 +327,41 @@ func TestGenerateJWT_JTIUniqueness(t *testing.T) {
 	}
 }
 
-// Helper function
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
+// This need extending with:
+// Tests for gibberish tokens
+// Tests for invalid chars in token
+func Test_generateJTI(t *testing.T) {
+	type args struct {
+		username string
+		issuedAt time.Time
 	}
-	return false
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "empty",
+			args: args{
+				username: "",
+				issuedAt: time.Time{},
+			},
+			want: "-0",
+		},
+		{
+			name: "username only",
+			args: args{
+				username: "username",
+				issuedAt: time.Time{},
+			},
+			want: "username-0",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := generateJTI(tt.args.username, tt.args.issuedAt); got != tt.want {
+				t.Errorf("generateJTI() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
